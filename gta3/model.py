@@ -8,6 +8,11 @@ import einops
 def phi_no_weighting(a, A):
     return a
 
+def phi_simple_adj_weighting(a, A):
+    alpha = 0.7
+    new_a = a * (1-alpha) + A * alpha
+    return new_a
+
 
 class AdjacencyAwareMultiHeadAttention(nn.Module):
 
@@ -68,10 +73,10 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         attention = self.softmax(attention / self.sqrt_out_dim)
 
         # reweight using the adjacency information
-        attention = self.phi(attention, A)
+        attention = self.phi(attention.transpose(-1,-2), A)
 
         # sum value tensors scaled by the attention weights
-        h_heads = torch.matmul(attention.transpose(-1,-2), V_h)
+        h_heads = torch.matmul(attention, V_h)
 
         return h_heads
 
@@ -99,10 +104,12 @@ class GTA3Layer(nn.Module):
         self.residual_heads = residual and in_dim == out_dim
         self.residual_ffn = residual
 
-        if phi == 'id':
+        if phi == 'none':
             self.phi = phi_no_weighting
+        elif phi == 'test':
+            self.phi = phi_simple_adj_weighting
         else:
-            print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'id'")
+            print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
             exit()
 
         self.O = nn.Linear(out_dim * num_heads, out_dim)

@@ -1,6 +1,7 @@
 import lightning as L
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import optim
 from torch.utils.data import Dataset
 from dgl.data import ZINCDataset
@@ -29,7 +30,7 @@ class GTA3_ZINC_Dataset(Dataset):
 
     def __getitem__(self, idx):
         # return (node features, adjacency matrix, label) tuple
-        return self.raw_data[idx][0].ndata['feat'], self.raw_data[idx][0].ndata['adj_mat'], self.raw_data[idx][1]
+        return self.raw_data[idx][0].ndata['feat'], self.raw_data[idx][0].ndata['adj_mat'], self.raw_data[idx][1].unsqueeze(0)
 
 
     def _preprocess_data(self):
@@ -37,12 +38,13 @@ class GTA3_ZINC_Dataset(Dataset):
         # create the adjacency matrix for each graph
         # TODO: this is horrable I know but it works for now...
         for g, _ in self.raw_data:
-            # adj_mat = torch.zeros((g.num_nodes(), g.num_nodes()))
-            # u, v = g.edges()
-            # for i in range(len(u)):
-            #     adj_mat[v[i]][u[i]] = 1
-            # g.ndata['adj_mat'] = adj_mat
-            g.ndata['adj_mat'] = torch.tensor([-1 for _ in range(g.num_nodes())])
+            adj_mat = torch.zeros((g.num_nodes(), g.num_nodes()))
+            u, v = g.edges()
+            for i in range(len(u)):
+                adj_mat[v[i]][u[i]] = 1
+            adj_mat = F.softmax(adj_mat, dim=1) # TODO: tryout
+            g.ndata['adj_mat'] = adj_mat
+            # g.ndata['adj_mat'] = torch.tensor([-1 for _ in range(g.num_nodes())])
 
     
     def get_num_types(self):
@@ -97,7 +99,10 @@ class GTA3_ZINC(L.LightningModule):
         # pass through final mlp
         y_pred = self.out_mlp(h)
         
-        return self.loss_func(y_pred, y_true)
+        train_loss = self.loss_func(y_pred, y_true)
+        self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
+        return train_loss
+    
 
 
     def configure_optimizers(self):
