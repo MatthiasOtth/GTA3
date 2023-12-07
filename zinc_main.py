@@ -9,7 +9,7 @@ def main():
     model_params = dict()
     model_params['hidden_dim'] = 64
     model_params['out_dim'] = 64
-    model_params['phi'] = 'id'
+    model_params['phi'] = 'test'
     model_params['num_heads'] = 4
     model_params['num_layers'] = 2
     model_params['residual'] = True
@@ -27,7 +27,7 @@ def main():
     model = GTA3_ZINC(model_params, train_params)
 
     # train model
-    trainer = L.Trainer(max_epochs=3)
+    trainer = L.Trainer(max_epochs=60)
     trainer.fit(model=model, train_dataloaders=train_loader)
 
 if __name__ == '__main__':
