@@ -1,3 +1,4 @@
+from typing import Any
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,17 +9,17 @@ def phi_no_weighting(a, A):
     return a
 
 
-
 class AdjacencyAwareMultiHeadAttention(nn.Module):
 
-    def __init__(self, in_dim, out_dim, num_heads=8, bias=True):
+    def __init__(self, in_dim, out_dim, phi, num_heads=8, bias=True):
         """
         Adjacency aware multi head attention layer.
 
         Args:
           in_dim:    the dimension of the input vectors
           out_dim:   the dimension of the output vectors
-          num_heads: the number of attention heads to be used
+          phi:       the weighting function to be used
+          num_heads: the number of attention heads to be used (default: 8)
           bias:      whether the attention matrices (Q, K, V) use a bias or not (default: True)
 
         """
@@ -33,7 +34,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         self.V = nn.Linear(in_dim, out_dim * num_heads, bias=bias)
 
         self.softmax = nn.Softmax(dim=-2)
-        self.phi = phi_no_weighting
+        self.phi = phi
 
 
     def forward(self, h, A):
@@ -75,17 +76,17 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         return h_heads
 
 
+class GTA3Layer(nn.Module):
 
-class GraphTransformerWithAdjacencyAwareAttention(nn.Module):
-
-    def __init__(self, in_dim, out_dim, num_heads, residual=True, batch_norm=True, attention_bias=True):
+    def __init__(self, in_dim, out_dim, phi, num_heads=8, residual=True, batch_norm=True, attention_bias=True):
         """
         Graph Transformer with Adjacency Aware Attention (GTA3).
 
         Args:
           in_dim:         the dimension of the input vectors
           out_dim:        the dimension of the output vectors
-          num_heads:      the number of attention heads to be used
+          phi:            the weighting function to be used
+          num_heads:      the number of attention heads to be used (default: 8)
           residual:       whether to use residual connections (default: True) (note that if in_dim != out_dim the heads will not have a residual connection)
           batch_norm:     whether to use batch normalization (default: True)
           attention_bias: whether the attention matrices (Q, K, V) use a bias or not (default: True)
@@ -95,12 +96,17 @@ class GraphTransformerWithAdjacencyAwareAttention(nn.Module):
 
         self.out_dim = out_dim
         self.batch_norm = batch_norm
-
         self.residual_heads = residual and in_dim == out_dim
         self.residual_ffn = residual
 
+        if phi == 'id':
+            self.phi = phi_no_weighting
+        else:
+            print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'id'")
+            exit()
+
         self.O = nn.Linear(out_dim * num_heads, out_dim)
-        self.aa_attention = AdjacencyAwareMultiHeadAttention(in_dim, out_dim, num_heads, bias=attention_bias)
+        self.aa_attention = AdjacencyAwareMultiHeadAttention(in_dim=in_dim, out_dim=out_dim, phi=self.phi, num_heads=num_heads, bias=attention_bias)
         self.FFN_layer_1 = nn.Linear(out_dim, out_dim * 2)
         self.FFN_layer_2 = nn.Linear(out_dim * 2, out_dim)
 
@@ -122,7 +128,7 @@ class GraphTransformerWithAdjacencyAwareAttention(nn.Module):
 
         # perform multihead attention
         h = self.aa_attention(h, A)
-        if len(h.shape) == 2: h = einops.rearrange(h, 'k n d -> n (k d)', d=self.out_dim)
+        if len(h.shape) == 3: h = einops.rearrange(h, 'k n d -> n (k d)', d=self.out_dim)
         else:                 h = einops.rearrange(h, 'b k n d -> b n (k d)', d=self.out_dim)
 
         # apply the O matrix
@@ -132,7 +138,7 @@ class GraphTransformerWithAdjacencyAwareAttention(nn.Module):
         if self.residual_heads:
             h = h_in + h
         if self.batch_norm:
-            h = self.batch_norm_1(h.transpose(-1,-2)).transpose(-1,-2)
+            h = self.batch_norm_1(h) # TODO: check that this is correct
 
         # feed forward network
         h_tmp = h
@@ -145,6 +151,6 @@ class GraphTransformerWithAdjacencyAwareAttention(nn.Module):
         if self.residual_ffn:
             h = h_tmp + h
         if self.batch_norm:
-            h = self.batch_norm_2(h.transpose(-1,-2)).transpose(-1,-2)
+            h = self.batch_norm_2(h) # TODO: check that this is correct
 
         return h
