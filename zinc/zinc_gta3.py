@@ -1,4 +1,6 @@
+from typing import Any
 import lightning as L
+from lightning.pytorch.utilities.types import STEP_OUTPUT
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -109,8 +111,7 @@ class GTA3_ZINC(L.LightningModule):
         self.loss_func = nn.L1Loss()
 
 
-    def training_step(self, batch, batch_idx):
-        x, A, y_true = batch
+    def forward_step(self, x, A):
 
         # create embeddings
         h = self.embedding(x)
@@ -123,12 +124,29 @@ class GTA3_ZINC(L.LightningModule):
         h = torch.mean(h, dim=-2) # TODO: using mean for now
 
         # pass through final mlp
-        y_pred = self.out_mlp(h)
+        return self.out_mlp(h)
+
+
+    def training_step(self, batch, batch_idx):
+        x, A, y_true = batch
+
+        y_pred = self.forward_step(x, A)
         
         train_loss = self.loss_func(y_pred, y_true)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
+
         return train_loss
     
+
+    def validation_step(self, batch, batch_idx):
+        x, A, y_true = batch
+
+        y_pred = self.forward_step(x, A)
+
+        valid_loss = self.loss_func(y_pred, y_true)
+        self.log("valid_loss", valid_loss, on_epoch=True, on_step=False, batch_size=1)
+
+        return valid_loss
 
 
     def configure_optimizers(self):

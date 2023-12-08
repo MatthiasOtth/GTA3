@@ -12,6 +12,6 @@
     },
     "train_params": {
         "lr": 1e-4,
-        "max_epochs": 3
+        "max_epochs": 1
     }
 }
