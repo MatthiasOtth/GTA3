@@ -48,6 +48,7 @@ class GTA3_ZINC_Dataset(Dataset):
         else:
             return self.raw_data[idx][0].ndata['feat'], None, self.raw_data[idx][1].unsqueeze(0)
 
+
     def _preprocess_data(self):
 
         if self.use_adj_matrix or self.use_shortest_path:
@@ -88,6 +89,23 @@ class GTA3_ZINC(L.LightningModule):
 
         self.train_params = train_params
 
+        # initialize the alpha value
+        if model_params['alpha'] == 'fixed':
+            self.per_layer_alpha = False
+            self.alpha = float(model_params['alpha_init'])
+        elif model_params['alpha'] == 'single_val': # TODO: test this...
+            self.per_layer_alpha = False
+            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
+        elif model_params['alpha'] == 'per_layer': # TODO: test this...
+            self.per_layer_alpha = True
+            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in model_params['num_layers']], dtype=torch.float))
+        elif model_params['alpha'] == 'per_head': # TODO: test this...
+            self.per_layer_alpha = True
+            # TODO: implement
+            raise NotImplementedError("alpha per head is not yet implemented...")
+        else:
+            raise ValueError("Invalid alpha model parameter!", model_params['alpha'])
+
         # creates an embedding depending on the node type
         self.embedding = nn.Embedding(model_params['num_types'], model_params['hidden_dim'])
         
@@ -95,13 +113,15 @@ class GTA3_ZINC(L.LightningModule):
         self.gta3_layers = nn.ModuleList(
             [ GTA3Layer(
                 in_dim=model_params['hidden_dim'], out_dim=model_params['hidden_dim'], num_heads=model_params['num_heads'], phi=model_params['phi'],
-                residual=model_params['residual'], batch_norm=model_params['batch_norm'], attention_bias=model_params['attention_bias']) 
+                residual=model_params['residual'], batch_norm=model_params['batch_norm'], layer_norm=model_params['layer_norm'], 
+                attention_bias=model_params['attention_bias']) 
             for _ in range(model_params['num_layers']-1) ]
         )
         self.gta3_layers.append(
             GTA3Layer(
                 in_dim=model_params['hidden_dim'], out_dim=model_params['out_dim'], num_heads=model_params['num_heads'], phi=model_params['phi'],
-                residual=model_params['residual'], batch_norm=model_params['batch_norm'], attention_bias=model_params['attention_bias'])
+                residual=model_params['residual'], batch_norm=model_params['batch_norm'], layer_norm=model_params['layer_norm'],
+                attention_bias=model_params['attention_bias'])
         )
 
         # final mlp to map the out dimension to a single value
@@ -117,8 +137,11 @@ class GTA3_ZINC(L.LightningModule):
         h = self.embedding(x)
 
         # pass through transformer layers
-        for layer in self.gta3_layers:
-            h = layer.forward(h, A)
+        for idx, layer in enumerate(self.gta3_layers):
+            if self.per_layer_alpha: 
+                h = layer.forward(h, A, self.alpha[idx])
+            else:
+                h = layer.forward(h, A, self.alpha)
 
         # combine resulting node embeddings
         h = torch.mean(h, dim=-2) # TODO: using mean for now

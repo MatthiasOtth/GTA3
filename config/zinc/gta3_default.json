@@ -3,12 +3,14 @@
         "hidden_dim": 64,
         "out_dim": 64,
         "phi": "inverse_hops",
+        "alpha": "fixed",
+        "alpha_init": 0,
         "num_heads": 4,
         "num_layers": 2,
         "residual": true,
         "batch_norm": false,
+        "layer_norm": true,
         "attention_bias": true
-
     },
     "train_params": {
         "lr": 1e-4,

@@ -5,15 +5,14 @@ import torch.nn.functional as F
 import einops
 
 
-def phi_no_weighting(a, A):
+def phi_no_weighting(a, A, alpha):
     return a
 
-def phi_simple_adj_weighting(a, A):
-    alpha = 0.7
+def phi_simple_adj_weighting(a, A, alpha):
     new_a = a * (1-alpha) + A * alpha
     return new_a
 
-def phi_inverse_hops(a, A, alpha=1):
+def phi_inverse_hops(a, A, alpha):
     # Assumes that A is shortest path matrix
     if alpha == 0:
         new_a = torch.where(A==1, a, torch.zeros_like(a))
@@ -52,13 +51,14 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         self.phi = phi
 
 
-    def forward(self, h, A):
+    def forward(self, h, A, alpha):
         """
         Computes an adjacency aware multi head attention forward pass.
 
         Args:
-          h: node embeddings [batch, nodes, in_dim] or [nodes, in_dim]
-          A: matrix provided to the weighting function [batch, num_nodes, num_nodes] or [num_nodes, num_nodes]
+          h:     node embeddings [batch, nodes, in_dim] or [nodes, in_dim]
+          A:     matrix provided to the weighting function [batch, num_nodes, num_nodes] or [num_nodes, num_nodes]
+          alpha: value used by the weighting function
 
         """
         assert len(h.shape) in (2,3), f"AdjacencyAwareMultiHeadAttention Error: Got invalid shape for h {h.shape}!"
@@ -83,7 +83,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         attention = self.softmax(attention / self.sqrt_out_dim)
 
         # reweight using the adjacency information
-        attention = self.phi(attention.transpose(-1,-2), A)
+        attention = self.phi(attention.transpose(-1,-2), A, alpha)
 
         # sum value tensors scaled by the attention weights
         h_heads = torch.matmul(attention, V_h)
@@ -93,7 +93,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
 
 class GTA3Layer(nn.Module):
 
-    def __init__(self, in_dim, out_dim, phi, num_heads=8, residual=True, batch_norm=True, attention_bias=True):
+    def __init__(self, in_dim, out_dim, phi, num_heads=8, residual=True, batch_norm=False, layer_norm=True, attention_bias=True):
         """
         Graph Transformer with Adjacency Aware Attention (GTA3).
 
@@ -103,7 +103,8 @@ class GTA3Layer(nn.Module):
           phi:            the weighting function to be used
           num_heads:      the number of attention heads to be used (default: 8)
           residual:       whether to use residual connections (default: True) (note that if in_dim != out_dim the heads will not have a residual connection)
-          batch_norm:     whether to use batch normalization (default: True)
+          batch_norm:     whether to use batch normalization (default: False)
+          layer_norm:     whether to use layer normalization (default: True)
           attention_bias: whether the attention matrices (Q, K, V) use a bias or not (default: True)
 
         """
@@ -111,6 +112,7 @@ class GTA3Layer(nn.Module):
 
         self.out_dim = out_dim
         self.batch_norm = batch_norm
+        self.layer_norm = layer_norm
         self.residual_heads = residual and in_dim == out_dim
         self.residual_ffn = residual
 
@@ -133,20 +135,25 @@ class GTA3Layer(nn.Module):
             self.batch_norm_1 = nn.BatchNorm1d(out_dim)
             self.batch_norm_2 = nn.BatchNorm1d(out_dim)
 
+        if layer_norm:
+            self.layer_norm_1 = nn.LayerNorm(out_dim)
+            self.layer_norm_2 = nn.LayerNorm(out_dim)
 
-    def forward(self, h, A):
+
+    def forward(self, h, A, alpha):
         """
         Computes a GTA3 forward pass.
 
         Args:
-          h: node embeddings [batch, nodes, in_dim] or [nodes, in_dim]
-          A: matrix provided to the weighting function [batch, num_nodes, num_nodes] or [num_nodes, num_nodes]
+          h:     node embeddings [batch, nodes, in_dim] or [nodes, in_dim]
+          A:     matrix provided to the weighting function [batch, num_nodes, num_nodes] or [num_nodes, num_nodes]
+          alpha: value used by the weighting function
 
         """
         h_in = h
 
         # perform multihead attention
-        h = self.aa_attention(h, A)
+        h = self.aa_attention(h, A, alpha)
         if len(h.shape) == 3: h = einops.rearrange(h, 'k n d -> n (k d)', d=self.out_dim)
         else:                 h = einops.rearrange(h, 'b k n d -> b n (k d)', d=self.out_dim)
 
@@ -158,6 +165,8 @@ class GTA3Layer(nn.Module):
             h = h_in + h
         if self.batch_norm:
             h = self.batch_norm_1(h) # TODO: check that this is correct
+        if self.layer_norm:
+            h = self.layer_norm_1(h)
 
         # feed forward network
         h_tmp = h
@@ -171,5 +180,7 @@ class GTA3Layer(nn.Module):
             h = h_tmp + h
         if self.batch_norm:
             h = self.batch_norm_2(h) # TODO: check that this is correct
+        if self.layer_norm:
+            h = self.layer_norm_2(h)
 
         return h
