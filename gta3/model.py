@@ -23,6 +23,7 @@ def phi_inverse_hops(a, A, alpha=1):
 
     return new_a
 
+
 class AdjacencyAwareMultiHeadAttention(nn.Module):
 
     def __init__(self, in_dim, out_dim, phi, num_heads=8, bias=True):

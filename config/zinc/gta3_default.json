@@ -1,0 +1,17 @@
+{
+    "model_params": {
+        "hidden_dim": 64,
+        "out_dim": 64,
+        "phi": "inverse_hops",
+        "num_heads": 4,
+        "num_layers": 2,
+        "residual": true,
+        "batch_norm": false,
+        "attention_bias": true
+
+    },
+    "train_params": {
+        "lr": 1e-4,
+        "max_epochs": 3
+    }
+}
