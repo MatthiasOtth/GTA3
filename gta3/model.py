@@ -13,6 +13,15 @@ def phi_simple_adj_weighting(a, A):
     new_a = a * (1-alpha) + A * alpha
     return new_a
 
+def phi_inverse_hops(a, A, alpha=1):
+    # Assumes that A is shortest path matrix
+    if alpha == 0:
+        new_a = torch.where(A==1, a, torch.zeros_like(a))
+    else:
+        new_a = 1./torch.pow(A, 1/alpha) * a
+    new_a = F.normalize(new_a, p=1, dim=-1)
+
+    return new_a
 
 class AdjacencyAwareMultiHeadAttention(nn.Module):
 
@@ -108,6 +117,8 @@ class GTA3Layer(nn.Module):
             self.phi = phi_no_weighting
         elif phi == 'test':
             self.phi = phi_simple_adj_weighting
+        elif phi == 'inverse_hops':
+            self.phi = phi_inverse_hops
         else:
             print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
             exit()

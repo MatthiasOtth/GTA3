@@ -9,7 +9,7 @@ def main():
     model_params = dict()
     model_params['hidden_dim'] = 64
     model_params['out_dim'] = 64
-    model_params['phi'] = 'test'
+    model_params['phi'] = 'inverse_hops'
     model_params['num_heads'] = 4
     model_params['num_layers'] = 2
     model_params['residual'] = True
@@ -20,7 +20,7 @@ def main():
     train_params['lr'] = 1e-3
 
     # load data
-    train_loader = GTA3_ZINC_Dataset('train')
+    train_loader = GTA3_ZINC_Dataset('train', format='shortest_path')
     model_params['num_types'] = train_loader.get_num_types()
 
     # load model

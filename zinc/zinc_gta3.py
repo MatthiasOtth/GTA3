@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim
 from torch.utils.data import Dataset
+import networkx as nx
 from dgl.data import ZINCDataset
 
 from gta3.model import GTA3Layer
@@ -11,7 +12,7 @@ from gta3.model import GTA3Layer
 
 class GTA3_ZINC_Dataset(Dataset):
 
-    def __init__(self, mode):
+    def __init__(self, mode, format='adj'):
 
         # load raw data
         print(f"Loading ZINC {mode} data...", end='')
@@ -23,6 +24,8 @@ class GTA3_ZINC_Dataset(Dataset):
         self._preprocess_data()
         print(f"Done")
 
+        self.format = format
+
 
     def __len__(self):
         return len(self.raw_data)
@@ -30,8 +33,12 @@ class GTA3_ZINC_Dataset(Dataset):
 
     def __getitem__(self, idx):
         # return (node features, adjacency matrix, label) tuple
-        return self.raw_data[idx][0].ndata['feat'], self.raw_data[idx][0].ndata['adj_mat'], self.raw_data[idx][1].unsqueeze(0)
-
+        if self.format == 'adj':
+            return self.raw_data[idx][0].ndata['feat'], self.raw_data[idx][0].ndata['adj_mat'], self.raw_data[idx][1].unsqueeze(0)
+        elif self.format == 'shortest_path':
+            return self.raw_data[idx][0].ndata['feat'], self.raw_data[idx][0].ndata['short_dist_mat'], self.raw_data[idx][1].unsqueeze(0)
+        else:
+            raise ValueError("Unknown format", self.format)
 
     def _preprocess_data(self):
 
@@ -44,7 +51,17 @@ class GTA3_ZINC_Dataset(Dataset):
                 adj_mat[v[i]][u[i]] = 1
             adj_mat = F.softmax(adj_mat, dim=1) # TODO: tryout
             g.ndata['adj_mat'] = adj_mat
-            # g.ndata['adj_mat'] = torch.tensor([-1 for _ in range(g.num_nodes())])
+            #g.ndata['adj_mat'] = torch.tensor([-1 for _ in range(g.num_nodes())])
+
+            # Create shortest path matrix
+            short_dist = nx.shortest_path_length(nx.from_numpy_array(adj_mat.numpy(),create_using=nx.DiGraph))
+            short_dist_mat = torch.zeros_like(adj_mat)
+            for i, j_d in short_dist:
+                for j, d in j_d.items():
+                    short_dist_mat[i, j] = d
+                # Dist i,i is 0, but we want it to be 1, since it takes 1 MessagePassing hop
+                short_dist_mat[i, i] = 1
+            g.ndata['short_dist_mat'] = short_dist_mat
 
     
     def get_num_types(self):
