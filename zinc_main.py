@@ -1,4 +1,5 @@
 import lightning as L
+from lightning.pytorch.loggers import TensorBoardLogger
 import json
 import os.path as osp
 import argparse
@@ -22,18 +23,16 @@ def main():
 
     # load the training data
     train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'])
+    valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'])
     config['model_params']['num_types'] = train_loader.get_num_types()
 
     # load the model
     model = GTA3_ZINC(config['model_params'], config['train_params'])
 
     # train the model
-    trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'])
-    trainer.fit(model=model, train_dataloaders=train_loader)
-
-    # validate the model
-    valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'])
-    trainer.validate(model=model, dataloaders=valid_loader)
+    logger = TensorBoardLogger(save_dir=config['logging']['save_dir'], name=config['logging']['name'])
+    trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, val_check_interval=config['train_params']['valid_interval'])
+    trainer.fit(model=model, train_dataloaders=train_loader, valid_loader=valid_loader)
 
 
 if __name__ == '__main__':

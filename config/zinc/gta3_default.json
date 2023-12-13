@@ -4,9 +4,9 @@
         "out_dim": 64,
         "phi": "inverse_hops",
         "alpha": "fixed",
-        "alpha_init": 0,
+        "alpha_init": 1,
         "num_heads": 4,
-        "num_layers": 2,
+        "num_layers": 4,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,
@@ -14,6 +14,11 @@
     },
     "train_params": {
         "lr": 1e-4,
-        "max_epochs": 1
+        "max_epochs": 20,
+        "valid_interval": 4
+    },
+    "logging": {
+        "save_dir": "logs/zinc",
+        "name": "tryouts"
     }
 }
