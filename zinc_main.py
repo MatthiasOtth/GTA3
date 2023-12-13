@@ -26,6 +26,7 @@ def main():
     if config['train_params']['seed'] is not None:
         print(f"Setting manual seed to {config['train_params']['seed']}.")
         torch.manual_seed(config['train_params']['seed'])
+    # torch.set_float32_matmul_precision('medium')
 
     # load the training data
     train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'])

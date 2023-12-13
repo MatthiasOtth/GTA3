@@ -3,9 +3,9 @@
         "hidden_dim": 64,
         "out_dim": 64,
         "phi": "inverse_hops",
-        "alpha": "per_model",
-        "alpha_init": 1,
-        "lambda": 1e-4,
+        "alpha": "fixed",
+        "alpha_init": 0,
+        "lambda": 1e-7,
         "num_heads": 4,
         "num_layers": 4,
         "residual": true,
@@ -15,9 +15,9 @@
     },
     "train_params": {
         "lr": 7e-4,
-        "max_epochs": 20,
-        "valid_interval": 2,
-        "seed": 0
+        "max_epochs": 10,
+        "valid_interval": 1,
+        "seed": null
     },
     "logging": {
         "save_dir": "logs/zinc",
