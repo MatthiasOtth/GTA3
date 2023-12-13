@@ -41,7 +41,6 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
 
         self.out_dim = out_dim
         self.sqrt_out_dim = torch.sqrt(torch.tensor(out_dim))
-        print(self.sqrt_out_dim)
 
         self.Q = nn.Linear(in_dim, out_dim * num_heads, bias=bias)
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=bias)

@@ -31,8 +31,8 @@ def main():
 
     # train the model
     logger = TensorBoardLogger(save_dir=config['logging']['save_dir'], name=config['logging']['name'])
-    trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, val_check_interval=config['train_params']['valid_interval'])
-    trainer.fit(model=model, train_dataloaders=train_loader, valid_loader=valid_loader)
+    trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, check_val_every_n_epoch=config['train_params']['valid_interval'])
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
 
 if __name__ == '__main__':
