@@ -17,8 +17,10 @@ def phi_inverse_hops(a, A, alpha):
     if alpha == 0:
         new_a = torch.where(A==1, a, torch.zeros_like(a))
     else:
-        new_a = 1./torch.pow(A, 1/alpha) * a
-    new_a = F.normalize(new_a, p=1, dim=-1)
+        x = torch.clamp(1/torch.abs(alpha), max=10)
+        new_a = 1./torch.pow(A, x) * a
+    # new_a = F.normalize(new_a, p=1, dim=-1)
+    new_a = F.softmax(new_a, dim=-1)
 
     return new_a
 

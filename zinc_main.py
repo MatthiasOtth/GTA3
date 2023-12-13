@@ -1,3 +1,4 @@
+import torch
 import lightning as L
 from lightning.pytorch.loggers import TensorBoardLogger
 import json
@@ -20,6 +21,11 @@ def main():
     config = None
     with open(args.config) as config_file:
         config = json.load(config_file)
+
+    # set the seed if we are using one
+    if config['train_params']['seed'] is not None:
+        print(f"Setting manual seed to {config['train_params']['seed']}.")
+        torch.manual_seed(config['train_params']['seed'])
 
     # load the training data
     train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'])

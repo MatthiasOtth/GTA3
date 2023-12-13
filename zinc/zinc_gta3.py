@@ -1,14 +1,13 @@
 import lightning as L
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import optim
 from torch.utils.data import Dataset
 import networkx as nx
 from dgl.data import ZINCDataset
 
 from gta3.model import GTA3Layer
-from gta3.loss import L1Loss_L1Alpha
+from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
 
 class GTA3_ZINC_Dataset(Dataset):
@@ -58,8 +57,8 @@ class GTA3_ZINC_Dataset(Dataset):
                 adj_mat = torch.zeros((g.num_nodes(), g.num_nodes()))
                 u, v = g.edges()
                 for i in range(len(u)):
-                    adj_mat[v[i]][u[i]] = 1
-                adj_mat = F.softmax(adj_mat, dim=1) # TODO: tryout
+                    adj_mat[u[i]][v[i]] = 1
+                # adj_mat = F.softmax(adj_mat, dim=1) # TODO: tryout
                 if self.use_adj_matrix:
                     g.ndata['adj_mat'] = adj_mat
 
@@ -122,7 +121,15 @@ class GTA3_ZINC(L.LightningModule):
         )
 
         # final mlp to map the out dimension to a single value
-        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, 1))
+        self.out_mlp = nn.Sequential(
+            nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2),
+            nn.ReLU(), 
+            # nn.Dropout(), 
+            nn.Linear(model_params['out_dim'] * 2, model_params['out_dim'] // 2),
+            nn.ReLU(), 
+            # nn.Dropout(), 
+            nn.Linear(model_params['out_dim'] // 2, 1),
+        )
         
         # loss functions
         if model_params['alpha'] == 'fixed':
@@ -169,9 +176,9 @@ class GTA3_ZINC(L.LightningModule):
         # log loss and alpha
         if self.per_layer_alpha:
             for l in range(len(self.gta3_layers)):
-                self.log(f"alpha_{l}", self.alpha[l], on_epoch=True, on_step=False, batch_size=1)
+                self.log(f"alpha_{l}", self.alpha[l], on_epoch=False, on_step=True, batch_size=1)
         else:
-            self.log("alpha", self.alpha, on_epoch=True, on_step=False, batch_size=1)
+            self.log("alpha", self.alpha, on_epoch=False, on_step=True, batch_size=1)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
 
         return train_loss
