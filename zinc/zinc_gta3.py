@@ -1,71 +1,19 @@
-import lightning as L
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch import optim
-from torch.utils.data import Dataset
-import networkx as nx
 from dgl import save_graphs, load_graphs
 from dgl.data import ZINCDataset
 from dgl.data.utils import save_info, load_info
-import os
 
 from gta3.model import GTA3BaseModel
+from gta3.dataloader import GTA3BaseDataset
 from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
 
-class GTA3_ZINC_Dataset(Dataset):
+class GTA3_ZINC_Dataset(GTA3BaseDataset):
 
     def __init__(self, mode, phi_func, force_reload=False):
-        path = './.dgl/'
-
-        # determine necessary precomputation steps
-        self.use_shortest_path = False
-        self.use_adj_matrix = False
-        data_path = None
-        if phi_func == 'test':
-            self.use_adj_matrix = True
-            data_path = path + f'{mode}_adj.bin'
-            info_path = path + f'{mode}_adj_info.pkl'
-        elif phi_func == 'inverse_hops':
-            self.use_shortest_path = True
-            data_path = path + f'{mode}_adj_sp.bin'
-            info_path = path + f'{mode}_adj_sp_info.pkl'
-
-        # load data
-        # > load preprocessed data if it exists
-        if not force_reload and data_path is not None and os.path.exists(data_path) and os.path.exists(info_path):
-            print(f"Loading cached ZINC {mode} data...", end='\r')
-            self.graphs, labels_dict = load_graphs(data_path)
-            self.labels = labels_dict['labels']
-            self.num_atom_types = load_info(info_path)['num_atom_types']
-            print(f"Loading cached ZINC {mode} data...Done")
-
-        # > load raw data and preprocess it
-        else:
-
-            # load raw data
-            print(f"Loading the raw ZINC {mode} data...", end='\r')
-            raw_data = ZINCDataset(mode=mode, raw_dir='./.dgl/')
-            self.graphs = raw_data[:][0]
-            self.labels = raw_data[:][1]
-            self.num_atom_types = raw_data.num_atom_types
-            print(f"Loading the raw ZINC {mode} data.......Done")
-
-            # preprocess data
-            print(f"Preprocessing the {mode} data...", end='\r')
-            self._preprocess_data()
-            print(f"Preprocessing the {mode} data..........Done")
-
-            # store the preprocessed data
-            print(f"Caching the preprocessed {mode} data...", end='\r')
-            save_graphs(data_path, self.graphs, {'labels': self.labels})
-            save_info(info_path, {'num_atom_types': self.num_atom_types})
-            print(f"Caching the preprocessed {mode} data...Done")
-
-
-    def __len__(self):
-        return len(self.graphs)
+        self.mode = mode
+        super().__init__('zinc', mode, phi_func, force_reload=force_reload)
 
 
     def __getitem__(self, idx):
@@ -78,31 +26,34 @@ class GTA3_ZINC_Dataset(Dataset):
             return self.graphs[idx].ndata['feat'], None, self.labels[idx].unsqueeze(0)
 
 
-    def _preprocess_data(self):
+    def _load_raw_data(self, data_path, info_path):
 
-        if self.use_adj_matrix or self.use_shortest_path:
-            for g in self.graphs:
-                
-                # create the adjacency matrix for each graph
-                # TODO: this is horrable I know but it works for now...
-                adj_mat = torch.zeros((g.num_nodes(), g.num_nodes()))
-                u, v = g.edges()
-                for i in range(len(u)):
-                    adj_mat[u[i]][v[i]] = 1
-                #adj_mat = F.softmax(adj_mat, dim=1) # TODO: tryout
-                if self.use_adj_matrix:
-                    g.ndata['adj_mat'] = adj_mat
+        # load raw data
+        print(f"Loading the raw ZINC {self.mode} data...", end='\r')
+        raw_data = ZINCDataset(mode=self.mode, raw_dir='./.dgl/')
+        self.graphs = raw_data[:][0]
+        self.labels = raw_data[:][1]
+        self.num_atom_types = raw_data.num_atom_types
+        print(f"Loading the raw ZINC {self.mode} data.......Done")
 
-                # create shortest path matrix
-                if self.use_shortest_path:
-                    short_dist = nx.shortest_path_length(nx.from_numpy_array(adj_mat.numpy(),create_using=nx.DiGraph))
-                    short_dist_mat = torch.zeros_like(adj_mat)
-                    for i, j_d in short_dist:
-                        for j, d in j_d.items():
-                            short_dist_mat[i, j] = d
-                        # Dist i,i is 0, but we want it to be 1, since it takes 1 MessagePassing hop
-                        short_dist_mat[i, i] = 1
-                    g.ndata['short_dist_mat'] = short_dist_mat
+        # preprocess data
+        print(f"Preprocessing the {self.mode} data...", end='\r')
+        self._preprocess_data()
+        print(f"Preprocessing the {self.mode} data..........Done")
+
+        # store the preprocessed data
+        print(f"Caching the preprocessed {self.mode} data...", end='\r')
+        save_graphs(data_path, self.graphs, {'labels': self.labels})
+        save_info(info_path, {'num_atom_types': self.num_atom_types})
+        print(f"Caching the preprocessed {self.mode} data...Done")
+
+
+    def _load_cached_data(self, data_path, info_path):
+        print(f"Loading cached ZINC {self.mode} data...", end='\r')
+        self.graphs, labels_dict = load_graphs(data_path)
+        self.labels = labels_dict['labels']
+        self.num_atom_types = load_info(info_path)['num_atom_types']
+        print(f"Loading cached ZINC {self.mode} data...Done")
 
     
     def get_num_types(self):
