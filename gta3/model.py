@@ -93,6 +93,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         return h_heads
 
 
+
 class GTA3Layer(nn.Module):
 
     def __init__(self, in_dim, out_dim, phi, num_heads=8, residual=True, batch_norm=False, layer_norm=True, attention_bias=True):
@@ -187,6 +188,7 @@ class GTA3Layer(nn.Module):
 
         return h
     
+
 
 class GTA3BaseModel(L.LightningModule):
     

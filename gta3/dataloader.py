@@ -1,13 +1,6 @@
-import lightning as L
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch import optim
 from torch.utils.data import Dataset
 import networkx as nx
-from dgl import save_graphs, load_graphs
-from dgl.data import ZINCDataset
-from dgl.data.utils import save_info, load_info
 import os
 
 
@@ -90,12 +83,12 @@ class GTA3BaseDataset(Dataset):
             assert self.num_classes is not None, "GTA3BaseDataset: Define self.num_classes to compute the class weights!"
             self.class_weights = list()
 
-            for idx, g in enumerate(self.graphs):
+            for g in self.graphs:
 
                 num_nodes = g.num_nodes()
                 print(num_nodes)
 
-                labels_counted = torch.bincount(self.labels[idx])
+                labels_counted = torch.bincount(g.ndata['label'])
                 labels_counted_nz = labels_counted.nonzero().squeeze()
                 print(labels_counted.nonzero().squeeze())
 
@@ -109,4 +102,5 @@ class GTA3BaseDataset(Dataset):
                 weights = torch.where(class_sizes > 0, weights, torch.zeros_like(weights))
                 print(weights)
 
-                self.class_weights.append(weights)
+                g.ndata['class_weights'] = weights
+                exit()
