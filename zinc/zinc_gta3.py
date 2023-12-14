@@ -1,6 +1,4 @@
-from typing import Any
 import lightning as L
-from lightning.pytorch.utilities.types import STEP_OUTPUT
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,6 +8,7 @@ import networkx as nx
 from dgl.data import ZINCDataset
 
 from gta3.model import GTA3Layer
+from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
 
 class GTA3_ZINC_Dataset(Dataset):
@@ -17,9 +16,9 @@ class GTA3_ZINC_Dataset(Dataset):
     def __init__(self, mode, phi_func):
 
         # load raw data
-        print(f"Loading ZINC {mode} data...", end='')
+        print(f"Loading ZINC {mode} data...", end='\r')
         self.raw_data = ZINCDataset(mode=mode, raw_dir='./.dgl/')
-        print(f"Done")
+        print(f"Loading ZINC {mode} data...Done")
 
         # determine necessary precomputation steps
         self.use_shortest_path = False
@@ -30,9 +29,9 @@ class GTA3_ZINC_Dataset(Dataset):
             self.use_shortest_path = True
 
         # preprocess data
-        print(f"Preprocessing the data...", end='')
+        print(f"Preprocessing the data...", end='\r')
         self._preprocess_data()
-        print(f"Done")
+        print(f"Preprocessing the data....Done")
 
 
     def __len__(self):
@@ -59,8 +58,8 @@ class GTA3_ZINC_Dataset(Dataset):
                 adj_mat = torch.zeros((g.num_nodes(), g.num_nodes()))
                 u, v = g.edges()
                 for i in range(len(u)):
-                    adj_mat[v[i]][u[i]] = 1
-                adj_mat = F.softmax(adj_mat, dim=1) # TODO: tryout
+                    adj_mat[u[i]][v[i]] = 1
+                #adj_mat = F.softmax(adj_mat, dim=1) # TODO: tryout
                 if self.use_adj_matrix:
                     g.ndata['adj_mat'] = adj_mat
 
@@ -92,13 +91,13 @@ class GTA3_ZINC(L.LightningModule):
         # initialize the alpha value
         if model_params['alpha'] == 'fixed':
             self.per_layer_alpha = False
-            self.alpha = float(model_params['alpha_init'])
-        elif model_params['alpha'] == 'single_val': # TODO: test this...
+            self.alpha = torch.tensor([model_params['alpha_init']], dtype=torch.float)
+        elif model_params['alpha'] == 'per_model': # TODO: test this...
             self.per_layer_alpha = False
             self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
         elif model_params['alpha'] == 'per_layer': # TODO: test this...
             self.per_layer_alpha = True
-            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in model_params['num_layers']], dtype=torch.float))
+            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in range(model_params['num_layers'])], dtype=torch.float))
         elif model_params['alpha'] == 'per_head': # TODO: test this...
             self.per_layer_alpha = True
             # TODO: implement
@@ -125,13 +124,30 @@ class GTA3_ZINC(L.LightningModule):
         )
 
         # final mlp to map the out dimension to a single value
+        # self.out_mlp = nn.Sequential(
+        #     nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2),
+        #     nn.ReLU(), 
+        #     # nn.Dropout(), 
+        #     nn.Linear(model_params['out_dim'] * 2, model_params['out_dim'] // 2),
+        #     nn.ReLU(), 
+        #     # nn.Dropout(), 
+        #     nn.Linear(model_params['out_dim'] // 2, 1),
+        # )
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, 1))
         
-        # loss function
-        self.loss_func = nn.L1Loss()
+                # loss functions
+        if model_params['alpha'] == 'fixed':
+            self.train_alpha = False
+            self.train_loss_func = nn.L1Loss()
+        else:
+            self.train_alpha = True
+            self.train_loss_func = L1Loss_L1Alpha
+            self.alpha_weight = model_params['alpha_weight']
+        self.valid_loss_func = nn.L1Loss()
 
 
     def forward_step(self, x, A):
+        self.alpha = self.alpha.to(device=self.device)
 
         # create embeddings
         h = self.embedding(x)
@@ -153,9 +169,21 @@ class GTA3_ZINC(L.LightningModule):
     def training_step(self, batch, batch_idx):
         x, A, y_true = batch
 
+        # forward pass
         y_pred = self.forward_step(x, A)
         
-        train_loss = self.loss_func(y_pred, y_true)
+        # compute loss
+        if self.train_alpha:
+            train_loss = self.train_loss_func(y_pred, y_true, self.alpha, self.alpha_weight) # NOTE: might not yet work for per head alpha
+        else:
+            train_loss = self.train_loss_func(y_pred, y_true)
+
+        # log loss and alpha
+        if self.per_layer_alpha:
+            for l in range(len(self.gta3_layers)):
+                self.log(f"alpha/alpha_{l}", self.alpha[l], on_epoch=False, on_step=True, batch_size=1)
+        else:
+            self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=1)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
 
         return train_loss
@@ -164,9 +192,13 @@ class GTA3_ZINC(L.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, A, y_true = batch
 
+        # forward pass
         y_pred = self.forward_step(x, A)
 
-        valid_loss = self.loss_func(y_pred, y_true)
+        # compute loss
+        valid_loss = self.valid_loss_func(y_pred, y_true)
+
+        # log loss
         self.log("valid_loss", valid_loss, on_epoch=True, on_step=False, batch_size=1)
 
         return valid_loss
