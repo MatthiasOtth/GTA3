@@ -5,7 +5,10 @@ import torch.nn.functional as F
 from torch import optim
 from torch.utils.data import Dataset
 import networkx as nx
+from dgl import save_graphs, load_graphs
 from dgl.data import ZINCDataset
+from dgl.data.utils import save_info, load_info
+import os
 
 from gta3.model import GTA3Layer
 from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
@@ -13,45 +16,72 @@ from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
 class GTA3_ZINC_Dataset(Dataset):
 
-    def __init__(self, mode, phi_func):
-
-        # load raw data
-        print(f"Loading ZINC {mode} data...", end='\r')
-        self.raw_data = ZINCDataset(mode=mode, raw_dir='./.dgl/')
-        print(f"Loading ZINC {mode} data...Done")
+    def __init__(self, mode, phi_func, force_reload=False):
+        path = './.dgl/'
 
         # determine necessary precomputation steps
         self.use_shortest_path = False
         self.use_adj_matrix = False
+        data_path = None
         if phi_func == 'test':
             self.use_adj_matrix = True
+            data_path = path + f'{mode}_adj.bin'
+            info_path = path + f'{mode}_adj_info.pkl'
         elif phi_func == 'inverse_hops':
             self.use_shortest_path = True
+            data_path = path + f'{mode}_adj_sp.bin'
+            info_path = path + f'{mode}_adj_sp_info.pkl'
 
-        # preprocess data
-        print(f"Preprocessing the data...", end='\r')
-        self._preprocess_data()
-        print(f"Preprocessing the data....Done")
+        # load data
+        # > load preprocessed data if it exists
+        if not force_reload and data_path is not None and os.path.exists(data_path) and os.path.exists(info_path):
+            print(f"Loading cached ZINC {mode} data...", end='\r')
+            self.graphs, labels_dict = load_graphs(data_path)
+            self.labels = labels_dict['labels']
+            self.num_atom_types = load_info(info_path)['num_atom_types']
+            print(f"Loading cached ZINC {mode} data...Done")
+
+        # > load raw data and preprocess it
+        else:
+
+            # load raw data
+            print(f"Loading the raw ZINC {mode} data...", end='\r')
+            raw_data = ZINCDataset(mode=mode, raw_dir='./.dgl/')
+            self.graphs = raw_data[:][0]
+            self.labels = raw_data[:][1]
+            self.num_atom_types = raw_data.num_atom_types
+            print(f"Loading the raw ZINC {mode} data.......Done")
+
+            # preprocess data
+            print(f"Preprocessing the {mode} data...", end='\r')
+            self._preprocess_data()
+            print(f"Preprocessing the {mode} data..........Done")
+
+            # store the preprocessed data
+            print(f"Caching the preprocessed {mode} data...", end='\r')
+            save_graphs(data_path, self.graphs, {'labels': self.labels})
+            save_info(info_path, {'num_atom_types': self.num_atom_types})
+            print(f"Caching the preprocessed {mode} data...Done")
 
 
     def __len__(self):
-        return len(self.raw_data)
+        return len(self.graphs)
 
 
     def __getitem__(self, idx):
         # return (node features, adjacency matrix, label) tuple
         if self.use_adj_matrix:
-            return self.raw_data[idx][0].ndata['feat'], self.raw_data[idx][0].ndata['adj_mat'], self.raw_data[idx][1].unsqueeze(0)
+            return self.graphs[idx].ndata['feat'], self.graphs[idx].ndata['adj_mat'], self.labels[idx].unsqueeze(0)
         elif self.use_shortest_path:
-            return self.raw_data[idx][0].ndata['feat'], self.raw_data[idx][0].ndata['short_dist_mat'], self.raw_data[idx][1].unsqueeze(0)
+            return self.graphs[idx].ndata['feat'], self.graphs[idx].ndata['short_dist_mat'], self.labels[idx].unsqueeze(0)
         else:
-            return self.raw_data[idx][0].ndata['feat'], None, self.raw_data[idx][1].unsqueeze(0)
+            return self.graphs[idx].ndata['feat'], None, self.labels[idx].unsqueeze(0)
 
 
     def _preprocess_data(self):
 
         if self.use_adj_matrix or self.use_shortest_path:
-            for g, _ in self.raw_data:
+            for g in self.graphs:
                 
                 # create the adjacency matrix for each graph
                 # TODO: this is horrable I know but it works for now...
@@ -76,7 +106,7 @@ class GTA3_ZINC_Dataset(Dataset):
 
     
     def get_num_types(self):
-        return self.raw_data.num_atom_types
+        return self.num_atom_types
 
         
 
