@@ -4,10 +4,10 @@
         "out_dim": 64,
         "phi": "inverse_hops",
         "alpha": "per_layer",
-        "alpha_init": 0.5,
+        "alpha_init": [0.3, 0.3, 0.5, 0.6, 0.6, 0.5, 0.3, 0.3],
         "alpha_weight": 0,
         "num_heads": 4,
-        "num_layers": 4,
+        "num_layers": 8,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,
@@ -15,7 +15,7 @@
     },
     "train_params": {
         "lr": 1e-4,
-        "max_epochs": 2,
+        "max_epochs": 30,
         "valid_interval": 2,
         "seed": 0
     },

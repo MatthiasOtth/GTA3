@@ -127,7 +127,12 @@ class GTA3_ZINC(L.LightningModule):
             self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
         elif model_params['alpha'] == 'per_layer': # TODO: test this...
             self.per_layer_alpha = True
-            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in range(model_params['num_layers'])], dtype=torch.float))
+            if type(model_params['alpha_init']) == list:
+                assert len(model_params['alpha_init']) == model_params['num_layers'], \
+                    f"Number of layers ({model_params['num_layers']}) does not match number of initial alpha values given ({len(model_params['alpha_init'])})!"
+                self.alpha = torch.nn.Parameter(torch.tensor(model_params['alpha_init'], dtype=torch.float))
+            else:
+                self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in range(model_params['num_layers'])], dtype=torch.float))
         elif model_params['alpha'] == 'per_head': # TODO: test this...
             self.per_layer_alpha = True
             # TODO: implement
