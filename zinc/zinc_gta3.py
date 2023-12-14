@@ -10,7 +10,7 @@ from dgl.data import ZINCDataset
 from dgl.data.utils import save_info, load_info
 import os
 
-from gta3.model import GTA3Layer
+from gta3.model import GTA3BaseModel
 from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
 
@@ -111,54 +111,15 @@ class GTA3_ZINC_Dataset(Dataset):
         
 
 
-class GTA3_ZINC(L.LightningModule):
+class GTA3_ZINC(GTA3BaseModel):
     
     def __init__(self, model_params, train_params):
-        super().__init__()
-
-        self.train_params = train_params
-
-        # initialize the alpha value
-        if model_params['alpha'] == 'fixed':
-            self.per_layer_alpha = False
-            self.alpha = torch.tensor([model_params['alpha_init']], dtype=torch.float)
-        elif model_params['alpha'] == 'per_model': # TODO: test this...
-            self.per_layer_alpha = False
-            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
-        elif model_params['alpha'] == 'per_layer': # TODO: test this...
-            self.per_layer_alpha = True
-            if type(model_params['alpha_init']) == list:
-                assert len(model_params['alpha_init']) == model_params['num_layers'], \
-                    f"Number of layers ({model_params['num_layers']}) does not match number of initial alpha values given ({len(model_params['alpha_init'])})!"
-                self.alpha = torch.nn.Parameter(torch.tensor(model_params['alpha_init'], dtype=torch.float))
-            else:
-                self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in range(model_params['num_layers'])], dtype=torch.float))
-        elif model_params['alpha'] == 'per_head': # TODO: test this...
-            self.per_layer_alpha = True
-            # TODO: implement
-            raise NotImplementedError("alpha per head is not yet implemented...")
-        else:
-            raise ValueError("Invalid alpha model parameter!", model_params['alpha'])
-
-        # creates an embedding depending on the node type
-        self.embedding = nn.Embedding(model_params['num_types'], model_params['hidden_dim'])
         
-        # the main part of the model
-        self.gta3_layers = nn.ModuleList(
-            [ GTA3Layer(
-                in_dim=model_params['hidden_dim'], out_dim=model_params['hidden_dim'], num_heads=model_params['num_heads'], phi=model_params['phi'],
-                residual=model_params['residual'], batch_norm=model_params['batch_norm'], layer_norm=model_params['layer_norm'], 
-                attention_bias=model_params['attention_bias']) 
-            for _ in range(model_params['num_layers']-1) ]
-        )
-        self.gta3_layers.append(
-            GTA3Layer(
-                in_dim=model_params['hidden_dim'], out_dim=model_params['out_dim'], num_heads=model_params['num_heads'], phi=model_params['phi'],
-                residual=model_params['residual'], batch_norm=model_params['batch_norm'], layer_norm=model_params['layer_norm'],
-                attention_bias=model_params['attention_bias'])
-        )
+        # initialize the GTA3 base model
+        super().__init__(model_params, train_params)
 
         # final mlp to map the out dimension to a single value
+        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, 1))
         # self.out_mlp = nn.Sequential(
         #     nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2),
         #     nn.ReLU(), 
@@ -168,9 +129,8 @@ class GTA3_ZINC(L.LightningModule):
         #     # nn.Dropout(), 
         #     nn.Linear(model_params['out_dim'] // 2, 1),
         # )
-        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, 1))
         
-                # loss functions
+        # loss functions
         if model_params['alpha'] == 'fixed':
             self.train_alpha = False
             self.train_loss_func = nn.L1Loss()
@@ -237,9 +197,4 @@ class GTA3_ZINC(L.LightningModule):
         self.log("valid_loss", valid_loss, on_epoch=True, on_step=False, batch_size=1)
 
         return valid_loss
-
-
-    def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.train_params['lr'])
-        return optimizer
     

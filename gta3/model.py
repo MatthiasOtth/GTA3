@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import einops
+import lightning as L
+from torch import optim
 
 
 def phi_no_weighting(a, A, alpha):
@@ -95,7 +97,7 @@ class GTA3Layer(nn.Module):
 
     def __init__(self, in_dim, out_dim, phi, num_heads=8, residual=True, batch_norm=False, layer_norm=True, attention_bias=True):
         """
-        Graph Transformer with Adjacency Aware Attention (GTA3).
+        Graph Transformer with Adjacency Aware Attention (GTA3) layer.
 
         Args:
           in_dim:         the dimension of the input vectors
@@ -184,3 +186,72 @@ class GTA3Layer(nn.Module):
             h = self.layer_norm_2(h)
 
         return h
+    
+
+class GTA3BaseModel(L.LightningModule):
+    
+    def __init__(self, model_params, train_params):
+        """
+        Graph Transformer with Adjacency Aware Attention (GTA3) base model.
+
+        Args:
+          model_params: dictionary containing the model parameters
+          train_params: dictionary containing the training parameters
+
+        """
+        super().__init__()
+
+        self.train_params = train_params
+
+        # initialize the alpha value
+        if model_params['alpha'] == 'fixed':
+            self.per_layer_alpha = False
+            self.alpha = torch.tensor([model_params['alpha_init']], dtype=torch.float)
+        elif model_params['alpha'] == 'per_model': # TODO: test this...
+            self.per_layer_alpha = False
+            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
+        elif model_params['alpha'] == 'per_layer': # TODO: test this...
+            self.per_layer_alpha = True
+            if type(model_params['alpha_init']) == list:
+                assert len(model_params['alpha_init']) == model_params['num_layers'], \
+                    f"Number of layers ({model_params['num_layers']}) does not match number of initial alpha values given ({len(model_params['alpha_init'])})!"
+                self.alpha = torch.nn.Parameter(torch.tensor(model_params['alpha_init'], dtype=torch.float))
+            else:
+                self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in range(model_params['num_layers'])], dtype=torch.float))
+        elif model_params['alpha'] == 'per_head': # TODO: test this...
+            self.per_layer_alpha = True
+            # TODO: implement
+            raise NotImplementedError("alpha per head is not yet implemented...")
+        else:
+            raise ValueError("Invalid alpha model parameter!", model_params['alpha'])
+
+        # creates an embedding depending on the node type
+        self.embedding = nn.Embedding(model_params['num_types'], model_params['hidden_dim'])
+        
+        # the main part of the model
+        self.gta3_layers = nn.ModuleList(
+            [ GTA3Layer(
+                in_dim=model_params['hidden_dim'], out_dim=model_params['hidden_dim'], num_heads=model_params['num_heads'], phi=model_params['phi'],
+                residual=model_params['residual'], batch_norm=model_params['batch_norm'], layer_norm=model_params['layer_norm'], 
+                attention_bias=model_params['attention_bias']) 
+            for _ in range(model_params['num_layers']-1) ]
+        )
+        self.gta3_layers.append(
+            GTA3Layer(
+                in_dim=model_params['hidden_dim'], out_dim=model_params['out_dim'], num_heads=model_params['num_heads'], phi=model_params['phi'],
+                residual=model_params['residual'], batch_norm=model_params['batch_norm'], layer_norm=model_params['layer_norm'],
+                attention_bias=model_params['attention_bias'])
+        )
+
+
+    def training_step(self, batch, batch_idx):
+        raise NotImplementedError("GTA3BaseModel: Define training_step function!")
+
+
+    def validation_step(self, batch, batch_idx):
+        raise NotImplementedError("GTA3BaseModel: Define training_step function!")
+
+
+    def configure_optimizers(self):
+        optimizer = optim.Adam(self.parameters(), lr=self.train_params['lr'])
+        return optimizer
