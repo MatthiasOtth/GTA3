@@ -39,7 +39,7 @@ def main():
     model = GTA3_ZINC(config['model_params'], config['train_params'])
 
     # train the model
-    logger = WandbLogger(log_model='all', save_dir=config['logging']['save_dir'], name=config['logging']['name'])
+    logger = WandbLogger(project='gta3', log_model='all', save_dir=config['logging']['save_dir'], name=config['logging']['name'])
     trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, check_val_every_n_epoch=config['train_params']['valid_interval'])
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
