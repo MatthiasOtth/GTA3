@@ -20,7 +20,7 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
         # return (node features, adjacency matrix, label) tuple
         if self.use_adj_matrix:
             return self.graphs[idx].ndata['feat'], self.graphs[idx].ndata['adj_mat'], self.labels[idx].unsqueeze(0)
-        elif self.use_shortest_path:
+        elif self.use_shortest_dist:
             return self.graphs[idx].ndata['feat'], self.graphs[idx].ndata['short_dist_mat'], self.labels[idx].unsqueeze(0)
         else:
             return self.graphs[idx].ndata['feat'], None, self.labels[idx].unsqueeze(0)
@@ -39,7 +39,7 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
         # preprocess data
         print(f"Preprocessing the {self.mode} data...", end='\r')
         self._preprocess_data()
-        print(f"Preprocessing the {self.mode} data..........Done")
+        print(f"Preprocessing the {self.mode} data..........Done" + ' '*15)
 
         # store the preprocessed data
         print(f"Caching the preprocessed {self.mode} data...", end='\r')

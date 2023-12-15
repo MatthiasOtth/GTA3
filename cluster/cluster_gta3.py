@@ -5,7 +5,7 @@ from dgl.data import CLUSTERDataset
 from dgl.data.utils import save_info, load_info
 
 from gta3.model import GTA3BaseModel
-from gta3.dataloader import GTA3BaseDataset
+from gta3.dataloader import GTA3BaseDataset, transform_to_graph_list
 
 
 class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
@@ -22,19 +22,19 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
                 self.graphs[idx].ndata['feat'],
                 self.graphs[idx].ndata['adj_mat'],
                 self.graphs[idx].ndata['label'],
-                self.graphs[idx].ndata['class_weights'])
-        elif self.use_shortest_path:
+                self.class_weights[idx])
+        elif self.use_shortest_dist:
             return (
                 self.graphs[idx].ndata['feat'],
                 self.graphs[idx].ndata['short_dist_mat'],
                 self.graphs[idx].ndata['label'],
-                self.graphs[idx].ndata['class_weights'])
+                self.class_weights[idx])
         else:
             return (
                 self.graphs[idx].ndata['feat'],
                 None,
                 self.graphs[idx]['label'],
-                self.graphs[idx].ndata['class_weights'])
+                self.class_weights[idx])
 
 
     def _load_raw_data(self, data_path, info_path):
@@ -48,19 +48,22 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
         # preprocess data
         print(f"Preprocessing the {self.mode} data...", end='\r')
         self._preprocess_data()
-        print(f"Preprocessing the {self.mode} data..........Done")
+        print(f"Preprocessing the {self.mode} data..........Done" + ' '*15)
 
         # store the preprocessed data
         print(f"Caching the preprocessed {self.mode} data...", end='\r')
-        save_graphs(data_path, self.graphs)
-        save_info(info_path, {'num_classes': self.num_classes})
+        save_graphs(data_path, transform_to_graph_list(self.graphs))
+        if self.compute_class_weights: save_info(info_path, {'num_classes': self.num_classes, 'class_weights': self.class_weights})
+        else:                          save_info(info_path, {'num_classes': self.num_classes})
         print(f"Caching the preprocessed {self.mode} data...Done")
 
 
     def _load_cached_data(self, data_path, info_path):
         print(f"Loading cached CLUSTER {self.mode} data...", end='\r')
-        self.graphs = load_graphs(data_path)
-        self.num_classes = load_info(info_path)['num_classes']
+        self.graphs = load_graphs(data_path)[0]
+        info = load_info(info_path)
+        self.num_classes = info['num_classes']
+        self.class_weights = info['class_weights'] if self.compute_class_weights else None
         print(f"Loading cached CLUSTER {self.mode} data...Done")
 
 
@@ -109,7 +112,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
         
         # compute loss
         self.criterion.weight = class_weights
-        train_loss = self.train_loss_func(preds, labels)
+        train_loss = self.criterion(preds, labels.long())
 
         # log loss and alpha
         if self.per_layer_alpha:
