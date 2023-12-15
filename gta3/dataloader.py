@@ -1,6 +1,5 @@
 import torch
 from torch.utils.data import Dataset
-import networkx as nx
 import os
 from dgl import shortest_dist
 
