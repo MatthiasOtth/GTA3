@@ -8,6 +8,8 @@ Useful links:
 ## TODOs
 
 - [ ] Implement neighbors match problem ([github](https://github.com/tech-srl/bottleneck))
+- [ ] Define configs resulting in ~500K parameters
+
 
 ## Models
 
@@ -45,9 +47,23 @@ optional arguments:
   --force_reload  Will force the dataloader to reload the raw data and preprocess it instead of using cached data.
 ```
 
+
 ## Cluster Setup (not the CLUSTER dataset)
 
-TODO
+### Conda Using Requirements File
+
+TODO: using requirements
+
+### Conda Using Install Commands
+
+The following commands are sufficient to install everything needed to run the models:
+
+```
+conda install -c conda-forge lightning
+conda install -c dglteam dgl
+conda install -c esri einops
+```
+
 
 ## GTA3 Model
 
