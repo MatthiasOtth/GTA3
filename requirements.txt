@@ -1,7 +1,8 @@
 # This file may be used to create an environment using:
-# $ conda create --name gta3 --file requirements.txt -c conda-forge -c dglteam
+# $ conda create --name gta3 --file requirements.txt -c conda-forge -c dglteam -c pytorch -c nvidia
 lightning
 dgl
 einops
 tensorboard
 wandb
+#pytorch-cuda=11.8
