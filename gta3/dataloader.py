@@ -55,9 +55,14 @@ class GTA3BaseDataset(Dataset):
         if batch_size > 1:
             self._create_batches()
 
+        # define data length
+        self.data_len = len(self.graphs)
+        if batch_size > 1:
+            self.data_len = self.num_batches
+
 
     def __len__(self):
-        return len(self.graphs)
+        return self.data_len
 
 
     def __getitem__(self, idx):
