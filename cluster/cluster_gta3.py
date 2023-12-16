@@ -10,31 +10,9 @@ from gta3.dataloader import GTA3BaseDataset, transform_to_graph_list
 
 class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
 
-    def __init__(self, mode, phi_func, force_reload=False):
+    def __init__(self, mode, phi_func, batch_size=10, force_reload=False):
         self.mode = mode
-        super().__init__('cluster', mode, phi_func, force_reload=force_reload, compute_class_weights=True)
-
-
-    def __getitem__(self, idx):
-        # return (node features, adjacency matrix, label) tuple
-        if self.use_adj_matrix:
-            return (
-                self.graphs[idx].ndata['feat'],
-                self.graphs[idx].ndata['adj_mat'],
-                self.graphs[idx].ndata['label'],
-                self.class_weights[idx])
-        elif self.use_shortest_dist:
-            return (
-                self.graphs[idx].ndata['feat'],
-                self.graphs[idx].ndata['short_dist_mat'],
-                self.graphs[idx].ndata['label'],
-                self.class_weights[idx])
-        else:
-            return (
-                self.graphs[idx].ndata['feat'],
-                None,
-                self.graphs[idx]['label'],
-                self.class_weights[idx])
+        super().__init__('cluster', mode, phi_func, batch_size=batch_size, force_reload=force_reload, compute_class_weights=True)
 
 
     def _load_raw_data(self, data_path, info_path):
@@ -65,6 +43,10 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
         self.num_classes = info['num_classes']
         self.class_weights = info['class_weights'] if self.compute_class_weights else None
         print(f"Loading cached CLUSTER {self.mode} data...Done")
+
+
+    def _get_label(self, idx):
+        return self.graphs[idx].ndata['label']
 
 
     def get_num_classes(self):
@@ -105,7 +87,14 @@ class GTA3_CLUSTER(GTA3BaseModel):
 
 
     def training_step(self, batch, batch_idx):
-        x, A, labels, class_weights = batch
+        num_nodes, x, A, labels, class_weights = batch
+
+        # TODO: remove to implement model
+        print(num_nodes)
+        print(x.shape)
+        print(A.shape)
+        print(labels.shape)
+        exit()
 
         # forward pass
         preds = self.forward_step(x, A)
@@ -126,7 +115,14 @@ class GTA3_CLUSTER(GTA3BaseModel):
     
 
     def validation_step(self, batch, batch_idx):
-        x, A, labels, _ = batch
+        num_nodes, x, A, labels, _ = batch
+
+        # TODO: remove to implement model
+        print(num_nodes)
+        print(x.shape)
+        print(A.shape)
+        print(labels.shape)
+        exit()
 
         # forward pass
         preds = self.forward_step(x, A)

@@ -11,19 +11,9 @@ from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
 class GTA3_ZINC_Dataset(GTA3BaseDataset):
 
-    def __init__(self, mode, phi_func, force_reload=False):
+    def __init__(self, mode, phi_func, batch_size=10, force_reload=False):
         self.mode = mode
-        super().__init__('zinc', mode, phi_func, force_reload=force_reload)
-
-
-    def __getitem__(self, idx):
-        # return (node features, adjacency matrix, label) tuple
-        if self.use_adj_matrix:
-            return self.graphs[idx].ndata['feat'], self.graphs[idx].ndata['adj_mat'], self.labels[idx].unsqueeze(0)
-        elif self.use_shortest_dist:
-            return self.graphs[idx].ndata['feat'], self.graphs[idx].ndata['short_dist_mat'], self.labels[idx].unsqueeze(0)
-        else:
-            return self.graphs[idx].ndata['feat'], None, self.labels[idx].unsqueeze(0)
+        super().__init__('zinc', mode, phi_func, batch_size=batch_size, force_reload=force_reload)
 
 
     def _load_raw_data(self, data_path, info_path):
@@ -56,6 +46,10 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
         print(f"Loading cached ZINC {self.mode} data...Done")
 
     
+    def _get_label(self, idx):
+        return self.labels[idx].unsqueeze(0)
+
+
     def get_num_types(self):
         return self.num_atom_types
 
@@ -113,7 +107,14 @@ class GTA3_ZINC(GTA3BaseModel):
 
 
     def training_step(self, batch, batch_idx):
-        x, A, y_true = batch
+        num_nodes, x, A, y_true = batch
+
+        # TODO: remove to implement model
+        print(num_nodes)
+        print(x.shape)
+        print(A.shape)
+        print(y_true.shape)
+        exit()
 
         # forward pass
         y_pred = self.forward_step(x, A)
@@ -136,7 +137,14 @@ class GTA3_ZINC(GTA3BaseModel):
     
 
     def validation_step(self, batch, batch_idx):
-        x, A, y_true = batch
+        num_nodes, x, A, y_true = batch
+
+        # TODO: remove to implement model
+        print(num_nodes)
+        print(x.shape)
+        print(A.shape)
+        print(y_true.shape)
+        exit()
 
         # forward pass
         y_pred = self.forward_step(x, A)
