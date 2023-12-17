@@ -1,6 +1,6 @@
 import torch
 import lightning as L
-from lightning.pytorch.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import WandbLogger
 import json
 import os.path as osp
 import argparse
@@ -39,7 +39,8 @@ def main():
     model = GTA3_ZINC(config['model_params'], config['train_params'])
 
     # train the model
-    logger = TensorBoardLogger(save_dir=config['logging']['save_dir'], name=config['logging']['name'])
+    logger = WandbLogger(project='gta3', log_model='all', save_dir=config['logging']['save_dir'], name=config['logging']['name'])
+    logger.log_hyperparams(config)
     trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, check_val_every_n_epoch=config['train_params']['valid_interval'])
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 

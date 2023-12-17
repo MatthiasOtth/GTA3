@@ -204,8 +204,8 @@ class GTA3BaseDataset(Dataset):
                     max_num_nodes = n
 
             # init new batch tensors
-            batch_num_nodes = torch.zeros((curr_batch_size)) # TODO: dtype
-            batch_feat = torch.zeros((curr_batch_size, max_num_nodes)) # TODO: dtype
+            batch_num_nodes = torch.zeros((curr_batch_size), dtype=torch.int) # TODO: dtype
+            batch_feat = torch.zeros((curr_batch_size, max_num_nodes), dtype=torch.int) # TODO: dtype
             if self.use_adj_matrix or self.use_shortest_dist:
                 batch_phi_mat = torch.zeros((curr_batch_size, max_num_nodes, max_num_nodes)) # TODO: dtype
             else:
