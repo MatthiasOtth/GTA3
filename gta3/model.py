@@ -19,7 +19,9 @@ def phi_inverse_hops(a, A, alpha):
         new_a = torch.where(A==1, a, torch.zeros_like(a))
     else:
         x = torch.clamp(1/torch.abs(alpha), max=10)
-        new_a = torch.where(A==0, torch.zeros_like(a), 1./torch.pow(A, x) * a)
+        #TODO: Rewrite so we don't need epsilon
+        new_a = 1./(torch.pow(A, x) * a + 1e-5)
+        new_a = torch.where(A==0, torch.zeros_like(a), new_a)
     new_a = F.normalize(new_a, p=1, dim=-1)
     # new_a = F.softmax(new_a, dim=-1)
 
@@ -98,7 +100,8 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
        
         # reweight using the adjacency information
         attention = attention.moveaxis(1,0)
-        attention = self.phi(attention.transpose(-1,-2), A, alpha)
+        attention = attention.transpose(-1,-2)
+        attention = self.phi(attention, A, alpha)
         attention = attention.moveaxis(0,1)
 
         # sum value tensors scaled by the attention weights

@@ -51,7 +51,7 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
 
 
     def get_num_types(self):
-        return self.num_atom_types
+        return self.num_atom_types + 1
 
 
 class GTA3_ZINC(GTA3BaseModel):
@@ -89,17 +89,14 @@ class GTA3_ZINC(GTA3BaseModel):
         # A: [B, N, Emb]
         # lengths: [B]
         self.alpha = self.alpha.to(device=self.device)
-
         # create embeddings
         h = self.embedding(x)
-
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
             if self.per_layer_alpha: 
                 h = layer.forward(h, A, lengths, self.alpha[idx])
             else:
                 h = layer.forward(h, A, lengths, self.alpha)
-
         # combine resulting node embeddings
         h = torch.mean(h, dim=-2) # TODO: using mean for now
 
