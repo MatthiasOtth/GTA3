@@ -14,7 +14,7 @@ def main():
 		                help="Path to the config file to be used.")
     parser.add_argument('--force_reload', action="store_true",
 		                help="Will force the dataloader to reload the raw data and preprocess it instead of using cached data.")
-    parser.add_argument('--no_wand', action="store_true",
+    parser.add_argument('--no_wandb', action="store_true",
 		                help="Will not use the WandB logger (useful for debugging).")
     args = parser.parse_args()
 

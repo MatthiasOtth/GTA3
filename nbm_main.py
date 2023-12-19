@@ -16,7 +16,7 @@ def main():
 		                help="Will force the dataloader to reload the raw data and preprocess it instead of using cached data.")
     parser.add_argument('--force_regenerate', action="store_true",
 		                help="Will force the dataloader to regenerate the raw data.")
-    parser.add_argument('--no_wand', action="store_true",
+    parser.add_argument('--no_wandb', action="store_true",
 		                help="Will not use the WandB logger (useful for debugging).")
     args = parser.parse_args()
 
