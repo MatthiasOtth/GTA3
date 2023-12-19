@@ -9,7 +9,7 @@ Useful links:
 
 - [ ] Implement neighbors match problem ([github](https://github.com/tech-srl/bottleneck))
 - [ ] Define configs resulting in ~500K parameters
-
+- [ ] Replicate benchmark setting of another paper. -> Use simple LR scheduler, fixed parameter budget, max 12h runtime etc.
 
 ## Models
 

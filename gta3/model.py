@@ -19,7 +19,9 @@ def phi_inverse_hops(a, A, alpha):
         new_a = torch.where(A==1, a, torch.zeros_like(a))
     else:
         x = torch.clamp(1/torch.abs(alpha), max=10)
-        new_a = 1./torch.pow(A, x) * a
+        #TODO: Rewrite so we don't need epsilon
+        new_a = 1./(torch.pow(A, x) * a + 1e-5)
+        new_a = torch.where(A==0, torch.zeros_like(a), new_a)
     new_a = F.normalize(new_a, p=1, dim=-1)
     # new_a = F.softmax(new_a, dim=-1)
 
@@ -53,45 +55,59 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         self.phi = phi
 
 
-    def forward(self, h, A, alpha):
+    def forward(self, h, A, lengths, alpha):
         """
         Computes an adjacency aware multi head attention forward pass.
 
         Args:
           h:     node embeddings [batch, nodes, in_dim] or [nodes, in_dim]
           A:     matrix provided to the weighting function [batch, num_nodes, num_nodes] or [num_nodes, num_nodes]
+          lengths: [batch,]
           alpha: value used by the weighting function
 
         """
-        assert len(h.shape) in (2,3), f"AdjacencyAwareMultiHeadAttention Error: Got invalid shape for h {h.shape}!"
+        if len(h.shape) == 2:
+            h = h.unsqueeze(0)
+            A = A.unsqueeze(0)
+
+        assert len(h.shape) == 3, f"AdjacencyAwareMultiHeadAttention Error: Got invalid shape for h {h.shape}!"
 
         # apply the query, key and value matrices
         Q_h = self.Q(h)
         K_h = self.K(h)
         V_h = self.V(h)
-        if len(h.shape) == 2:
-            Q_h = einops.rearrange(Q_h, 'n (k d) -> k n d', d=self.out_dim)
-            K_h = einops.rearrange(K_h, 'n (k d) -> k n d', d=self.out_dim)
-            V_h = einops.rearrange(V_h, 'n (k d) -> k n d', d=self.out_dim)
-        else:
-            Q_h = einops.rearrange(Q_h, 'b n (k d) -> b k n d', d=self.out_dim)
-            K_h = einops.rearrange(K_h, 'b n (k d) -> b k n d', d=self.out_dim)
-            V_h = einops.rearrange(V_h, 'b n (k d) -> b k n d', d=self.out_dim)
         
+        Q_h = einops.rearrange(Q_h, 'b n (k d) -> b k n d', d=self.out_dim)
+        K_h = einops.rearrange(K_h, 'b n (k d) -> b k n d', d=self.out_dim)
+        V_h = einops.rearrange(V_h, 'b n (k d) -> b k n d', d=self.out_dim)
+
         # compute the dot products
         attention = torch.matmul(Q_h, K_h.transpose(-1,-2)).transpose(-1,-2)
-
+        
+        #TODO: Optimize generation of mask
+        mask = torch.full((attention.shape[0], attention.shape[2]), False)
+        for i in range(lengths.shape[0]):
+            mask[i,lengths[i]:] = True
+        mask.unsqueeze_(1)
+        mask.unsqueeze_(-1)
+        
+        attention = attention.masked_fill(mask, float('-inf'))
         # apply scaling and softmax to attention
         attention = self.softmax(attention / self.sqrt_out_dim)
 
+        mask = mask.moveaxis(-2,-1)
+        attention = attention.masked_fill(mask, float(0))
+       
         # reweight using the adjacency information
-        attention = self.phi(attention.transpose(-1,-2), A, alpha)
+        attention = attention.moveaxis(1,0)
+        attention = attention.transpose(-1,-2)
+        attention = self.phi(attention, A, alpha)
+        attention = attention.moveaxis(0,1)
 
         # sum value tensors scaled by the attention weights
         h_heads = torch.matmul(attention, V_h)
 
         return h_heads
-
 
 
 class GTA3Layer(nn.Module):
@@ -143,7 +159,7 @@ class GTA3Layer(nn.Module):
             self.layer_norm_2 = nn.LayerNorm(out_dim)
 
 
-    def forward(self, h, A, alpha):
+    def forward(self, h, A, lengths, alpha):
         """
         Computes a GTA3 forward pass.
 
@@ -156,21 +172,28 @@ class GTA3Layer(nn.Module):
         h_in = h
 
         # perform multihead attention
-        h = self.aa_attention(h, A, alpha)
+        h = self.aa_attention(h, A, lengths, alpha)
         if len(h.shape) == 3: h = einops.rearrange(h, 'k n d -> n (k d)', d=self.out_dim)
         else:                 h = einops.rearrange(h, 'b k n d -> b n (k d)', d=self.out_dim)
 
+        # TODO: Check against ground truth
+        # print("Embeddings after attention in batched model")
+        # for i,h_i in enumerate(h):
+        #     print(f"Embedding sum {i}: {h_i.sum()}")
+
         # apply the O matrix
         h = self.O(h)
-
+        
         # residual & normalization
         if self.residual_heads:
             h = h_in + h
         if self.batch_norm:
+            h = h.moveaxis(-1,-2)
             h = self.batch_norm_1(h) # TODO: check that this is correct
+            h = h.moveaxis(-2,-1)
         if self.layer_norm:
             h = self.layer_norm_1(h)
-
+        
         # feed forward network
         h_tmp = h
         h = self.FFN_layer_1(h)
@@ -182,13 +205,13 @@ class GTA3Layer(nn.Module):
         if self.residual_ffn:
             h = h_tmp + h
         if self.batch_norm:
+            h = h.moveaxis(-1,-2)
             h = self.batch_norm_2(h) # TODO: check that this is correct
+            h = h.moveaxis(-2,-1)
         if self.layer_norm:
             h = self.layer_norm_2(h)
-
         return h
     
-
 
 class GTA3BaseModel(L.LightningModule):
     

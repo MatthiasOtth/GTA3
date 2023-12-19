@@ -17,7 +17,8 @@
         "lr": 1e-4,
         "max_epochs": 1,
         "valid_interval": 1,
-        "seed": 0
+        "seed": 0,
+        "batch_size": 10
     },
     "logging": {
         "save_dir": "logs/cluster",

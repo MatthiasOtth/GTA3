@@ -31,8 +31,8 @@ def main():
     torch.set_float32_matmul_precision('medium')
 
     # load the training data
-    train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'], force_reload=args.force_reload)
-    valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], force_reload=args.force_reload)
+    train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
+    valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
     config['model_params']['num_types'] = train_loader.get_num_types()
 
     # load the model

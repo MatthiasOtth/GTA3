@@ -11,19 +11,9 @@ from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
 class GTA3_ZINC_Dataset(GTA3BaseDataset):
 
-    def __init__(self, mode, phi_func, force_reload=False):
+    def __init__(self, mode, phi_func, batch_size=10, force_reload=False):
         self.mode = mode
-        super().__init__('zinc', mode, phi_func, force_reload=force_reload)
-
-
-    def __getitem__(self, idx):
-        # return (node features, adjacency matrix, label) tuple
-        if self.use_adj_matrix:
-            return self.graphs[idx].ndata['feat'], self.graphs[idx].ndata['adj_mat'], self.labels[idx].unsqueeze(0)
-        elif self.use_shortest_dist:
-            return self.graphs[idx].ndata['feat'], self.graphs[idx].ndata['short_dist_mat'], self.labels[idx].unsqueeze(0)
-        else:
-            return self.graphs[idx].ndata['feat'], None, self.labels[idx].unsqueeze(0)
+        super().__init__('zinc', mode, phi_func, batch_size=batch_size, force_reload=force_reload)
 
 
     def _load_raw_data(self, data_path, info_path):
@@ -56,10 +46,12 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
         print(f"Loading cached ZINC {self.mode} data...Done")
 
     
-    def get_num_types(self):
-        return self.num_atom_types
+    def _get_label(self, idx):
+        return self.labels[idx].unsqueeze(0)
 
-        
+
+    def get_num_types(self):
+        return self.num_atom_types + 1
 
 
 class GTA3_ZINC(GTA3BaseModel):
@@ -92,19 +84,19 @@ class GTA3_ZINC(GTA3BaseModel):
         self.valid_loss_func = nn.L1Loss()
 
 
-    def forward_step(self, x, A):
+    def forward_step(self, x, A, lengths):
+        # x: [B, N]
+        # A: [B, N, Emb]
+        # lengths: [B]
         self.alpha = self.alpha.to(device=self.device)
-
         # create embeddings
         h = self.embedding(x)
-
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
             if self.per_layer_alpha: 
-                h = layer.forward(h, A, self.alpha[idx])
+                h = layer.forward(h, A, lengths, self.alpha[idx])
             else:
-                h = layer.forward(h, A, self.alpha)
-
+                h = layer.forward(h, A, lengths, self.alpha)
         # combine resulting node embeddings
         h = torch.mean(h, dim=-2) # TODO: using mean for now
 
@@ -113,11 +105,9 @@ class GTA3_ZINC(GTA3BaseModel):
 
 
     def training_step(self, batch, batch_idx):
-        x, A, y_true = batch
-
+        lengths, x, A, y_true = batch
         # forward pass
-        y_pred = self.forward_step(x, A)
-        
+        y_pred = self.forward_step(x, A, lengths)
         # compute loss
         if self.train_alpha:
             train_loss = self.train_loss_func(y_pred, y_true, self.alpha, self.alpha_weight) # NOTE: might not yet work for per head alpha
@@ -131,15 +121,14 @@ class GTA3_ZINC(GTA3BaseModel):
         else:
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=1)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
-
         return train_loss
     
 
     def validation_step(self, batch, batch_idx):
-        x, A, y_true = batch
+        lengths, x, A, y_true = batch
 
         # forward pass
-        y_pred = self.forward_step(x, A)
+        y_pred = self.forward_step(x, A, lengths)
 
         # compute loss
         valid_loss = self.valid_loss_func(y_pred, y_true)
