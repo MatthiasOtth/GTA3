@@ -76,7 +76,6 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         Q_h = self.Q(h)
         K_h = self.K(h)
         V_h = self.V(h)
-        
         Q_h = einops.rearrange(Q_h, 'b n (k d) -> b k n d', d=self.out_dim)
         K_h = einops.rearrange(K_h, 'b n (k d) -> b k n d', d=self.out_dim)
         V_h = einops.rearrange(V_h, 'b n (k d) -> b k n d', d=self.out_dim)
@@ -106,7 +105,6 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
 
         # sum value tensors scaled by the attention weights
         h_heads = torch.matmul(attention, V_h)
-
         return h_heads
 
 
@@ -128,8 +126,9 @@ class GTA3Layer(nn.Module):
 
         """
         super().__init__()
-
+        assert out_dim%num_heads == 0, f"GTA3 Error: out_dim ({out_dim}) must be divisible by num_heads ({num_heads})!"
         self.out_dim = out_dim
+        self.num_heads = num_heads
         self.batch_norm = batch_norm
         self.layer_norm = layer_norm
         self.residual_heads = residual and in_dim == out_dim
@@ -145,8 +144,8 @@ class GTA3Layer(nn.Module):
             print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
             exit()
 
-        self.O = nn.Linear(out_dim * num_heads, out_dim)
-        self.aa_attention = AdjacencyAwareMultiHeadAttention(in_dim=in_dim, out_dim=out_dim, phi=self.phi, num_heads=num_heads, bias=attention_bias)
+        self.O = nn.Linear(out_dim, out_dim)
+        self.aa_attention = AdjacencyAwareMultiHeadAttention(in_dim=in_dim, out_dim=out_dim//num_heads, phi=self.phi, num_heads=num_heads, bias=attention_bias)
         self.FFN_layer_1 = nn.Linear(out_dim, out_dim * 2)
         self.FFN_layer_2 = nn.Linear(out_dim * 2, out_dim)
 
@@ -173,8 +172,7 @@ class GTA3Layer(nn.Module):
 
         # perform multihead attention
         h = self.aa_attention(h, A, lengths, alpha)
-        if len(h.shape) == 3: h = einops.rearrange(h, 'k n d -> n (k d)', d=self.out_dim)
-        else:                 h = einops.rearrange(h, 'b k n d -> b n (k d)', d=self.out_dim)
+        h = einops.rearrange(h, 'b k n d -> b n (k d)', d=self.out_dim//self.num_heads)
 
         # TODO: Check against ground truth
         # print("Embeddings after attention in batched model")
