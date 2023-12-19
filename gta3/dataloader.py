@@ -183,7 +183,13 @@ class GTA3BaseDataset(Dataset):
 
 
     def _create_batches(self):
+
+        # get the label size and additional feature dimension
         label_size = self._get_label(0).size(0)
+        if len(self.graphs[0].ndata['feat'].shape) > 1:
+            feat_dim = self.graphs[0].ndata['feat'].size(1)
+        else:
+            feat_dim = 0
 
         # pad graphs
         print(f"Creating batches (0/{self.num_graphs})..." + ' '*15, end="\r")
@@ -205,7 +211,8 @@ class GTA3BaseDataset(Dataset):
 
             # init new batch tensors
             batch_num_nodes = torch.zeros((curr_batch_size), dtype=torch.int) # TODO: dtype
-            batch_feat = torch.zeros((curr_batch_size, max_num_nodes), dtype=torch.int) # TODO: dtype
+            batch_feat_shape = (curr_batch_size, max_num_nodes) if feat_dim == 0 else (curr_batch_size, max_num_nodes, feat_dim)
+            batch_feat = torch.zeros(batch_feat_shape, dtype=torch.int) # TODO: dtype
             if self.use_adj_matrix or self.use_shortest_dist:
                 batch_phi_mat = torch.zeros((curr_batch_size, max_num_nodes, max_num_nodes), dtype=torch.int) # TODO: dtype
             else:
