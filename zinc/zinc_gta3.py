@@ -85,18 +85,25 @@ class GTA3_ZINC(GTA3BaseModel):
 
 
     def forward_step(self, x, A, lengths):
-        # x: [B, N]
-        # A: [B, N, Emb]
-        # lengths: [B]
+        """
+            Input:
+            - x: [B, N]
+            - A: [B, N, Emb]
+            - lengths: [B]
+
+        """
         self.alpha = self.alpha.to(device=self.device)
+
         # create embeddings
         h = self.embedding(x)
+
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
             if self.per_layer_alpha: 
                 h = layer.forward(h, A, lengths, self.alpha[idx])
             else:
                 h = layer.forward(h, A, lengths, self.alpha)
+
         # combine resulting node embeddings
         h = torch.mean(h, dim=-2) # TODO: using mean for now
 
@@ -106,8 +113,10 @@ class GTA3_ZINC(GTA3BaseModel):
 
     def training_step(self, batch, batch_idx):
         lengths, x, A, y_true = batch
+
         # forward pass
         y_pred = self.forward_step(x, A, lengths)
+
         # compute loss
         if self.train_alpha:
             train_loss = self.train_loss_func(y_pred, y_true, self.alpha, self.alpha_weight) # NOTE: might not yet work for per head alpha
@@ -121,6 +130,7 @@ class GTA3_ZINC(GTA3BaseModel):
         else:
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=1)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
+
         return train_loss
     
 

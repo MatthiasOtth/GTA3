@@ -69,7 +69,14 @@ class GTA3_CLUSTER(GTA3BaseModel):
         self.accuracy_func = MulticlassAccuracy(model_params['num_classes'])
 
 
-    def forward_step(self, x, A):
+    def forward_step(self, x, A, lengths):
+        """
+            Input:
+            - x: [B, N]
+            - A: [B, N, Emb]
+            - lengths: [B]
+
+        """
         self.alpha = self.alpha.to(device=self.device)
 
         # create embeddings
@@ -78,26 +85,19 @@ class GTA3_CLUSTER(GTA3BaseModel):
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
             if self.per_layer_alpha: 
-                h = layer.forward(h, A, self.alpha[idx])
+                h = layer.forward(h, A, lengths, self.alpha[idx])
             else:
-                h = layer.forward(h, A, self.alpha)
+                h = layer.forward(h, A, lengths, self.alpha)
 
         # pass through final mlp
         return self.out_mlp(h)
 
 
     def training_step(self, batch, batch_idx):
-        num_nodes, x, A, labels, class_weights = batch
-
-        # TODO: remove to implement model
-        print(num_nodes)
-        print(x.shape)
-        print(A.shape)
-        print(labels.shape)
-        exit()
+        lengths, x, A, labels, class_weights = batch
 
         # forward pass
-        preds = self.forward_step(x, A)
+        preds = self.forward_step(x, A, lengths)
         
         # compute loss
         self.criterion.weight = class_weights
@@ -115,17 +115,10 @@ class GTA3_CLUSTER(GTA3BaseModel):
     
 
     def validation_step(self, batch, batch_idx):
-        num_nodes, x, A, labels, _ = batch
-
-        # TODO: remove to implement model
-        print(num_nodes)
-        print(x.shape)
-        print(A.shape)
-        print(labels.shape)
-        exit()
+        lengths, x, A, labels, _ = batch
 
         # forward pass
-        preds = self.forward_step(x, A)
+        preds = self.forward_step(x, A, lengths)
 
         # compute accuracy
         valid_loss = self.accuracy_func(preds, labels)
