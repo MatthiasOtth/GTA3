@@ -13,6 +13,13 @@ def phi_simple_adj_weighting(a, A, alpha):
     new_a = a * (1-alpha) + A * alpha
     return new_a
 
+def phi_alpha_pow_dist(a, A, alpha):
+    alpha = torch.clamp(alpha, min=0) #, max=1)
+    new_a = torch.pow(alpha + 1e-10, A) * a
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
 def phi_inverse_hops(a, A, alpha):
     # Assumes that A is shortest path matrix
     if alpha == 0:
@@ -100,12 +107,19 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         # reweight using the adjacency information
         attention = attention.moveaxis(1,0)
         attention = attention.transpose(-1,-2)
-        attention = self.phi(attention, A, alpha)
-        attention = attention.moveaxis(0,1)
+        log_dict = {}
+        log_dict["attention/attention_pre_transform_d1"]  = attention[:,A==1].mean(), attention[:,A==1].reshape(-1).shape[0]
+        log_dict["attention/attention_pre_transform_d2+"] = attention[:,A >1].mean(), attention[:,A >1].reshape(-1).shape[0]
 
+        attention = self.phi(attention, A, alpha)
+
+        log_dict["attention/attention_post_transform_d1"]  = attention[:,A==1].mean(), attention[:,A==1].reshape(-1).shape[0]
+        log_dict["attention/attention_post_transform_d2+"] = attention[:,A >1].mean(), attention[:,A >1].reshape(-1).shape[0]
+        attention = attention.moveaxis(0,1)
+        
         # sum value tensors scaled by the attention weights
         h_heads = torch.matmul(attention, V_h)
-        return h_heads
+        return h_heads, log_dict
 
 
 class GTA3Layer(nn.Module):
@@ -140,6 +154,8 @@ class GTA3Layer(nn.Module):
             self.phi = phi_simple_adj_weighting
         elif phi == 'inverse_hops':
             self.phi = phi_inverse_hops
+        elif phi == 'alpha_pow_dist':
+            self.phi = phi_alpha_pow_dist
         else:
             print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
             exit()
@@ -171,7 +187,7 @@ class GTA3Layer(nn.Module):
         h_in = h
 
         # perform multihead attention
-        h = self.aa_attention(h, A, lengths, alpha)
+        h, log_dict = self.aa_attention(h, A, lengths, alpha)
         h = einops.rearrange(h, 'b k n d -> b n (k d)', d=self.out_dim//self.num_heads)
 
         # TODO: Check against ground truth
@@ -208,7 +224,7 @@ class GTA3Layer(nn.Module):
             h = h.moveaxis(-2,-1)
         if self.layer_norm:
             h = self.layer_norm_2(h)
-        return h
+        return h, log_dict
     
 
 class GTA3BaseModel(L.LightningModule):

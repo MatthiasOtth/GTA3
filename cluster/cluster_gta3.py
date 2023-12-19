@@ -85,10 +85,12 @@ class GTA3_CLUSTER(GTA3BaseModel):
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
             if self.per_layer_alpha: 
-                h = layer.forward(h, A, lengths, self.alpha[idx])
+                h, log_dict = layer.forward(h, A, lengths, self.alpha[idx])
             else:
-                h = layer.forward(h, A, lengths, self.alpha)
-
+                h, log_dict = layer.forward(h, A, lengths, self.alpha)
+            for key in log_dict:
+                val, bs = log_dict[key]
+                self.log(key, val, on_epoch=True, on_step=False, batch_size=bs)
         # pass through final mlp
         return self.out_mlp(h)
 

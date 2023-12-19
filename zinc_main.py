@@ -4,7 +4,6 @@ from pytorch_lightning.loggers import WandbLogger
 import json
 import os.path as osp
 import argparse
-
 from zinc.zinc_gta3 import GTA3_ZINC, GTA3_ZINC_Dataset
 
 def main():
@@ -39,7 +38,7 @@ def main():
     model = GTA3_ZINC(config['model_params'], config['train_params'])
 
     # train the model
-    logger = WandbLogger(project='gta3', log_model='all', save_dir=config['logging']['save_dir'], name=config['logging']['name'])
+    logger = WandbLogger(entity="gta3", project='gta3', name=config['logging']['name'], save_dir=config['logging']['save_dir'], log_model='all',)
     logger.log_hyperparams(config)
     trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, check_val_every_n_epoch=config['train_params']['valid_interval'])
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
