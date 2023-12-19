@@ -81,13 +81,9 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
         return self.labels[idx]
 
 
-    def get_d0(self):
+    def get_num_types(self):
         return self.d0
-
-
-    def get_d1(self):
-        return self.d1
-        
+    
 
 
 class GTA3_NBM(GTA3BaseModel):
@@ -97,46 +93,55 @@ class GTA3_NBM(GTA3BaseModel):
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
+        # need two embeddings: one for the keys and one for the values
+        # -> one is already created in the base model
+        self.embedding1 = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
+
         # final mlp to map the out dimension to a single value
-        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_classes']))
+        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
         
         # loss functions
         self.criterion = nn.CrossEntropyLoss()
-        self.accuracy_func = MulticlassAccuracy(model_params['num_classes'])
+        self.accuracy_func = MulticlassAccuracy(model_params['num_out_types'])
 
 
-    def forward_step(self, x, A):
+    def forward_step(self, x, A, lengths):
+        """
+            Input:
+            - x: [B, N, 2]
+            - A: [B, N, Emb]
+            - lengths: [B]
+
+        """
         self.alpha = self.alpha.to(device=self.device)
 
         # create embeddings
-        h = self.embedding(x)
+        print(x)
+        x_key, x_val = x[..., 0], x[..., 1]
+        print(x_key)
+        print(x_val)
+        exit()
+        h = self.embedding(x_key) + self.embedding1(x_val)
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
             if self.per_layer_alpha: 
-                h = layer.forward(h, A, self.alpha[idx])
+                h = layer.forward(h, A, lengths, self.alpha[idx])
             else:
-                h = layer.forward(h, A, self.alpha)
+                h = layer.forward(h, A, lengths, self.alpha)
 
         # pass through final mlp
         return self.out_mlp(h)
 
 
     def training_step(self, batch, batch_idx):
-        num_nodes, x, A, labels, class_weights = batch
-
-        # TODO: remove to implement model
-        print(num_nodes)
-        print(x.shape)
-        print(A.shape)
-        print(labels.shape)
-        exit()
+        lengths, x, A, labels = batch
 
         # forward pass
-        preds = self.forward_step(x, A)
+        preds = self.forward_step(x, A, lengths)
         
         # compute loss
-        self.criterion.weight = class_weights
+        # self.criterion.weight = class_weights
         train_loss = self.criterion(preds, labels.long())
 
         # log loss and alpha
@@ -151,17 +156,10 @@ class GTA3_NBM(GTA3BaseModel):
     
 
     def validation_step(self, batch, batch_idx):
-        num_nodes, x, A, labels, _ = batch
-
-        # TODO: remove to implement model
-        print(num_nodes)
-        print(x.shape)
-        print(A.shape)
-        print(labels.shape)
-        exit()
+        lengths, x, A, labels = batch
 
         # forward pass
-        preds = self.forward_step(x, A)
+        preds = self.forward_step(x, A, lengths)
 
         # compute accuracy
         valid_loss = self.accuracy_func(preds, labels)

@@ -49,7 +49,11 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
         return self.graphs[idx].ndata['label']
 
 
-    def get_num_classes(self):
+    def get_num_types(self):
+        return self.num_classes + 1
+    
+
+    def get_num_out_types(self):
         return self.num_classes
         
 

@@ -249,7 +249,7 @@ class GTA3BaseModel(L.LightningModule):
             raise ValueError("Invalid alpha model parameter!", model_params['alpha'])
 
         # creates an embedding depending on the node type
-        self.embedding = nn.Embedding(model_params['num_types'], model_params['hidden_dim'])
+        self.embedding = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
         
         # the main part of the model
         self.gta3_layers = nn.ModuleList(

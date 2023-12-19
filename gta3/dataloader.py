@@ -226,7 +226,7 @@ class GTA3BaseDataset(Dataset):
 
                 # > pad node features
                 batch_feat[idx, :g.num_nodes()] = g.ndata['feat']
-                batch_feat[idx, g.num_nodes():] = self.get_num_types() - 1 # Take last type, should be unused
+                batch_feat[idx, g.num_nodes():] = self.get_num_in_types() - 1 # Take last type, should be unused
                 
                 # > pad adjacency matrix
                 if self.use_adj_matrix:
@@ -251,4 +251,18 @@ class GTA3BaseDataset(Dataset):
 
             print(f"Creating batches ({graph_top_idx}/{self.num_graphs})...", end="\r")
         print(f"Creating batches ({self.num_graphs}/{self.num_graphs})...")
+    
             
+    def get_num_types(self):
+        raise NotImplementedError("GTA3BaseDataset: Implement the get_num_types function!")
+    
+
+    def get_num_in_types(self):
+        if self.batch_size > 1:
+            return self.get_num_types() + 1
+        else:
+            return self.get_num_types()
+        
+
+    def get_num_out_types(self):
+        return self.get_num_types()
