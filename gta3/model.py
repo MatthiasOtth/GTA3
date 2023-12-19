@@ -188,7 +188,9 @@ class GTA3Layer(nn.Module):
         if self.residual_heads:
             h = h_in + h
         if self.batch_norm:
+            h = h.moveaxis(-1,-2)
             h = self.batch_norm_1(h) # TODO: check that this is correct
+            h = h.moveaxis(-2,-1)
         if self.layer_norm:
             h = self.layer_norm_1(h)
         
@@ -203,7 +205,9 @@ class GTA3Layer(nn.Module):
         if self.residual_ffn:
             h = h_tmp + h
         if self.batch_norm:
+            h = h.moveaxis(-1,-2)
             h = self.batch_norm_2(h) # TODO: check that this is correct
+            h = h.moveaxis(-2,-1)
         if self.layer_norm:
             h = self.layer_norm_2(h)
         return h
