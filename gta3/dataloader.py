@@ -72,15 +72,12 @@ class GTA3BaseDataset(Dataset):
 
             # > including class weights
             if self.compute_class_weights:
-                graph_base_idx = idx * self.batch_size
-                graph_top_idx = graph_base_idx + self.batch_size
-                graph_top_idx = graph_top_idx if graph_top_idx < self.num_graphs else self.num_graphs
                 return (
                     self.batches[idx][0], 
                     self.batches[idx][1], 
                     self.batches[idx][2], 
                     self.batches[idx][3], 
-                    self.class_weights[graph_base_idx:graph_top_idx])
+                    self.batches[idx][4])
             
             # > without class weights
             return (
@@ -94,7 +91,7 @@ class GTA3BaseDataset(Dataset):
         if self.use_adj_matrix:
             phi_mat = self.graphs[idx].ndata['adj_mat']
         elif self.use_shortest_dist:
-            phi_mat = self.graphs[idx].ndata['adj_mat']
+            phi_mat = self.graphs[idx].ndata['short_dist_mat']
         else:
             phi_mat = None
 
@@ -105,7 +102,7 @@ class GTA3BaseDataset(Dataset):
                 self.graphs[idx].ndata['feat'], 
                 phi_mat, 
                 self._get_label(idx), 
-                self.class_weights[graph_base_idx:graph_top_idx])
+                self.class_weights[idx])
         
         # > without class weights
         return (
@@ -247,7 +244,13 @@ class GTA3BaseDataset(Dataset):
                 else:
                     batch_label[idx, :label.size(0)] = label
 
-            self.batches.append((batch_num_nodes, batch_feat, batch_phi_mat, batch_label))
+            # process class weights and add batch to batches list
+            if self.compute_class_weights:
+                batch_class_weights = torch.concat([x.unsqueeze(0) for x in self.class_weights[graph_base_idx:graph_top_idx]], dim=0)
+                batch_class_weights = torch.mean(batch_class_weights, dim=0)
+                self.batches.append((batch_num_nodes, batch_feat, batch_phi_mat, batch_label, batch_class_weights))
+            else:
+                self.batches.append((batch_num_nodes, batch_feat, batch_phi_mat, batch_label))
 
             print(f"Creating batches ({graph_top_idx}/{self.num_graphs})...", end="\r")
         print(f"Creating batches ({self.num_graphs}/{self.num_graphs})...")

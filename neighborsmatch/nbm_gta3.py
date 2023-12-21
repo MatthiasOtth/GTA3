@@ -116,11 +116,7 @@ class GTA3_NBM(GTA3BaseModel):
         self.alpha = self.alpha.to(device=self.device)
 
         # create embeddings
-        print(x)
         x_key, x_val = x[..., 0], x[..., 1]
-        print(x_key)
-        print(x_val)
-        exit()
         h = self.embedding(x_key) + self.embedding1(x_val)
 
         # pass through transformer layers
@@ -129,6 +125,9 @@ class GTA3_NBM(GTA3BaseModel):
                 h = layer.forward(h, A, lengths, self.alpha[idx])
             else:
                 h = layer.forward(h, A, lengths, self.alpha)
+
+        # extract embedding of the root node (root is always first node)
+        h = h[:,0,:]
 
         # pass through final mlp
         return self.out_mlp(h)
@@ -141,8 +140,7 @@ class GTA3_NBM(GTA3BaseModel):
         preds = self.forward_step(x, A, lengths)
         
         # compute loss
-        # self.criterion.weight = class_weights
-        train_loss = self.criterion(preds, labels.long())
+        train_loss = self.criterion(preds, labels.squeeze(-1).long() - 1)
 
         # log loss and alpha
         if self.per_layer_alpha:
@@ -162,7 +160,7 @@ class GTA3_NBM(GTA3BaseModel):
         preds = self.forward_step(x, A, lengths)
 
         # compute accuracy
-        valid_loss = self.accuracy_func(preds, labels)
+        valid_loss = self.accuracy_func(preds, labels.squeeze(-1).long() - 1)
 
         # log accuracy
         self.log("valid_accuracy", valid_loss, on_epoch=True, on_step=False, batch_size=1)

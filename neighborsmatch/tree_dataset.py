@@ -54,12 +54,12 @@ class TreeDataset(object):
         for comb in self.get_combinations():
             edge_index = self.create_blank_tree()
             nodes = torch.tensor(self.get_nodes_features(comb), dtype=torch.long)
-            root_mask = torch.tensor([True] + [False] * (len(nodes) - 1), dtype=torch.bool)
+            # root_mask = torch.tensor([True] + [False] * (len(nodes) - 1), dtype=torch.bool)
             label = self.label(comb)
             
             g = dgl.graph((edge_index[0], edge_index[1]))
             g.ndata['feat'] = nodes
-            g.ndata['root_mask'] = root_mask
+            # g.ndata['root_mask'] = root_mask
             data_list.append((g, label))
 
         dim0, out_dim = self.get_dims()

@@ -3,7 +3,7 @@
         "hidden_dim": 64,
         "out_dim": 64,
         "phi": "inverse_hops",
-        "alpha": "fixed",
+        "alpha": "per_layer",
         "alpha_init": 1,
         "alpha_weight": 0,
         "num_heads": 4,
@@ -15,10 +15,10 @@
     },
     "train_params": {
         "lr": 1e-4,
-        "max_epochs": 1,
-        "valid_interval": 1,
+        "max_epochs": 5,
+        "valid_interval": 2,
         "seed": 0,
-        "batch_size": 10
+        "batch_size": 64
     },
     "logging": {
         "save_dir": "logs/cluster",
