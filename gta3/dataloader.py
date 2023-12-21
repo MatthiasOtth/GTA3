@@ -151,6 +151,7 @@ class GTA3BaseDataset(Dataset):
                 sd_mat = shortest_dist(g, return_paths=False)
                 for i in range(g.num_nodes()):
                     sd_mat[i][i] = 1 # set distance to self to 1 (equal to one message passing hop)
+                sd_mat = torch.where(sd_mat==-1, torch.zeros_like(sd_mat), sd_mat)
                 g.ndata['short_dist_mat'] = sd_mat
 
                 if idx % 50 == 0:

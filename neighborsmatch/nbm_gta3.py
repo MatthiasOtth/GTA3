@@ -78,7 +78,7 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
 
 
     def _get_label(self, idx):
-        return self.labels[idx]
+        return self.labels[idx] - 1
 
 
     def get_num_types(self):
@@ -117,7 +117,9 @@ class GTA3_NBM(GTA3BaseModel):
 
         # create embeddings
         x_key, x_val = x[..., 0], x[..., 1]
-        h = self.embedding(x_key) + self.embedding1(x_val)
+        h_key = self.embedding(x_key)
+        h_val = self.embedding1(x_val)
+        h = h_key + h_val
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
@@ -135,35 +137,37 @@ class GTA3_NBM(GTA3BaseModel):
 
     def training_step(self, batch, batch_idx):
         lengths, x, A, labels = batch
+        batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
 
         # forward pass
         preds = self.forward_step(x, A, lengths)
-        
+
         # compute loss
-        train_loss = self.criterion(preds, labels.squeeze(-1).long() - 1)
+        train_loss = self.criterion(preds, labels.squeeze(-1).long())
 
         # log loss and alpha
         if self.per_layer_alpha:
             for l in range(len(self.gta3_layers)):
-                self.log(f"alpha/alpha_{l}", self.alpha[l], on_epoch=False, on_step=True, batch_size=1)
+                self.log(f"alpha/alpha_{l}", self.alpha[l], on_epoch=False, on_step=True, batch_size=batch_size)
         else:
-            self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=1)
-        self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
+            self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=batch_size)
+        self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return train_loss
     
 
     def validation_step(self, batch, batch_idx):
         lengths, x, A, labels = batch
+        batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
 
         # forward pass
         preds = self.forward_step(x, A, lengths)
 
         # compute accuracy
-        valid_loss = self.accuracy_func(preds, labels.squeeze(-1).long() - 1)
+        valid_loss = self.accuracy_func(preds, labels.squeeze(-1).long())
 
         # log accuracy
-        self.log("valid_accuracy", valid_loss, on_epoch=True, on_step=False, batch_size=1)
+        self.log("valid_accuracy", valid_loss, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return valid_loss
     

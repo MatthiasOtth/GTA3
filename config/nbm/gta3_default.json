@@ -23,6 +23,6 @@
     },
     "logging": {
         "save_dir": "logs/nbm",
-        "name": "initial"
+        "name": "initial_nbm"
     }
 }
