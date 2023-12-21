@@ -84,7 +84,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         attention = torch.matmul(Q_h, K_h.transpose(-1,-2)).transpose(-1,-2)
         
         #TODO: Optimize generation of mask
-        mask = torch.full((attention.shape[0], attention.shape[2]), False)
+        mask = torch.full((attention.shape[0], attention.shape[2]), False, device=attention.device)
         for i in range(lengths.shape[0]):
             mask[i,lengths[i]:] = True
         mask.unsqueeze_(1)
