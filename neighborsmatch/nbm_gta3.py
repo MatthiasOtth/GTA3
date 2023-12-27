@@ -97,6 +97,10 @@ class GTA3_NBM(GTA3BaseModel):
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
+        # need two embeddings: one for the keys and one for the values
+        # -> one is already created in the base model
+        self.embedding1 = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
+
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
         
@@ -116,7 +120,11 @@ class GTA3_NBM(GTA3BaseModel):
         self.alpha = self.alpha.to(device=self.device)
 
         # create embeddings
-        h = self.embedding(x)
+        # h = self.embedding(x)
+        x_key, x_type = x[..., 0], x[..., 1]
+        h_key = self.embedding(x_key)
+        h_type = self.embedding1(x_type)
+        h = h_key + h_type
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
@@ -156,6 +164,11 @@ class GTA3_NBM(GTA3BaseModel):
     def validation_step(self, batch, batch_idx):
         lengths, x, A, labels = batch
         batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
+
+        # print(x)
+        # print(A)
+        # print(labels)
+        # exit()
 
         # forward pass
         preds = self.forward_step(x, A, lengths)

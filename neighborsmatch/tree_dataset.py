@@ -15,10 +15,11 @@ from sklearn.model_selection import train_test_split
 
 
 class TreeDataset():
-    def __init__(self, depth, seed=None):
+    def __init__(self, depth, seed=None, directed=False):
         self.depth = depth
         self.seed = seed
         self.rng = np.random.RandomState(seed)
+        self.directed = directed
 
 
     def _num_tree_nodes(self):
@@ -27,12 +28,15 @@ class TreeDataset():
 
     def _create_base_tree(self):
         num_nodes = self._num_tree_nodes()
-        nodes = [0] * (num_nodes - 1) # tree nodes with type 0
+        # nodes = list(range(1, num_nodes+1))
+        nodes = [0] * num_nodes
 
         edges = list()
         for i in range(1, num_nodes):
             p = (i-1) >> 1
             edges.append((i,p))
+            if not self.directed:
+                edges.append((p, i))
 
         return num_nodes, nodes, edges
 
@@ -40,12 +44,16 @@ class TreeDataset():
     def _add_neighbors(self, num_nodes, nodes, edges, root_neighbors, leaf_neighbors):
         for i in range(root_neighbors):
             edges.append((i+num_nodes, 0))
+            if not self.directed:
+                edges.append((0, i+num_nodes))
 
         num_nodes += root_neighbors
         leaf_base_idx = (2 ** self.depth) - 1
         for i in range(2 ** self.depth):
             for _ in range(leaf_neighbors[i]):
                 edges.append((num_nodes, i+leaf_base_idx))
+                if not self.directed:
+                    edges.append((i+leaf_base_idx, num_nodes))
                 num_nodes += 1
         
         nodes += [1] * (num_nodes - len(nodes))
@@ -62,7 +70,8 @@ class TreeDataset():
 
         # generate graphs
         data_list = list()
-        print(f"Generating {num_leaf_perm * num_perm_examples} graphs...")
+        print(f"Generating {num_leaf_perm * num_perm_examples} graphs..." + ""*15)
+        max_n = 0
         for perm in permutations:
             for i in self.rng.permutation(range(num_leaf_nodes))[:num_perm_examples]:
 
@@ -71,20 +80,38 @@ class TreeDataset():
 
                 n, N, E = self._create_base_tree()
                 n, N, E = self._add_neighbors(n, N, E, root_neighbors, leaf_neighbors)
+                # N = [list(range(n)), N]
+                N = [list(range(1, self._num_tree_nodes()+1)) + [0]*(n-self._num_tree_nodes()), N]
 
                 E = torch.tensor(E, dtype=torch.int).transpose(0,1)
-                N = torch.tensor(N, dtype=torch.int)
+                N = torch.tensor(N, dtype=torch.int).transpose(0,1)
 
                 g = dgl.graph((E[0], E[1]), num_nodes=n)
                 g.ndata['feat'] = N
                 
                 label = np.where(leaf_neighbors == root_neighbors)[0][0] + num_leaf_nodes - 1
 
+                # # DEBUG -> TODO: remove later
+                # import networkx as nx
+                # import matplotlib.pyplot as plt
+                # g = nx.DiGraph()
+                # feat = dict()
+                # for i, n in enumerate(N):
+                #     g.add_node(i)
+                #     feat[i] = int(n)
+                # for i in range(E.size(1)):
+                #     g.add_edge(int(E[0][i]), int(E[1][i]))
+                # print(label)
+                # nx.draw_networkx(g, arrows=True, labels=feat)
+                # plt.show()
+                # exit()
+
                 data_list.append((g, label))
+                max_n = max(max_n, n)
         
         # split graphs into train, valid and test data
         train_data, test_data = train_test_split(data_list, train_size=train_size, shuffle=True, stratify=[l for _, l in data_list], random_state=self.seed)
         valid_data, test_data = train_test_split(test_data, train_size=valid_size, shuffle=False)
 
         # return (train_data, valid_data, test_data, num_types, num_tree_nodes)
-        return train_data, valid_data, test_data, 2, self._num_tree_nodes()
+        return train_data, valid_data, test_data, max_n, self._num_tree_nodes()
