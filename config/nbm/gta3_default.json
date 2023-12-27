@@ -3,11 +3,11 @@
         "hidden_dim": 64,
         "out_dim": 64,
         "phi": "inverse_hops",
-        "alpha": "per_layer",
-        "alpha_init": 1,
+        "alpha": "fixed",
+        "alpha_init": 0,
         "alpha_weight": 0,
-        "num_heads": 4,
-        "num_layers": 4,
+        "num_heads": 2,
+        "num_layers": 5,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,
@@ -19,7 +19,7 @@
         "valid_interval": 2,
         "seed": 0,
         "batch_size": 64,
-        "tree_depth": 4
+        "tree_depth": 3
     },
     "logging": {
         "save_dir": "logs/nbm",

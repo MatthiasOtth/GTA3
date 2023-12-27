@@ -9,79 +9,82 @@ Slightly adapted the output format to our applications.
 
 import torch
 import dgl
-
-from torch.nn import functional as F
+import math
+import numpy as np
 from sklearn.model_selection import train_test_split
 
 
-class TreeDataset(object):
+class TreeDataset():
     def __init__(self, depth, seed=None):
-        super(TreeDataset, self).__init__()
         self.depth = depth
-        self.num_nodes, self.edges, self.leaf_indices = self._create_blank_tree()
         self.seed = seed
+        self.rng = np.random.RandomState(seed)
 
-    def add_child_edges(self, cur_node, max_node):
-        edges = []
-        leaf_indices = []
-        stack = [(cur_node, max_node)]
-        while len(stack) > 0:
-            cur_node, max_node = stack.pop()
-            if cur_node == max_node:
-                leaf_indices.append(cur_node)
-                continue
-            left_child = cur_node + 1
-            right_child = cur_node + 1 + ((max_node - cur_node) // 2)
-            edges.append([left_child, cur_node])
-            edges.append([right_child, cur_node])
-            stack.append((right_child, max_node))
-            stack.append((left_child, right_child - 1))
-        return edges, leaf_indices
 
-    def _create_blank_tree(self):
-        max_node_id = 2 ** (self.depth + 1) - 2
-        edges, leaf_indices = self.add_child_edges(cur_node=0, max_node=max_node_id)
-        return max_node_id + 1, edges, leaf_indices
+    def _num_tree_nodes(self):
+        return 2 ** (self.depth + 1) - 1
 
-    def create_blank_tree(self):
-        edge_index = torch.tensor(self.edges).t()
-        return edge_index
 
-    def generate_data(self, train_size, test_size):
-        # NOTE: first test size is taken from the data, then the rest is split according to the train_size
-        data_list = []
+    def _create_base_tree(self):
+        num_nodes = self._num_tree_nodes()
+        nodes = [0] * (num_nodes - 1) # tree nodes with type 0
 
-        for comb in self.get_combinations():
-            edge_index = self.create_blank_tree()
-            nodes = torch.tensor(self.get_nodes_features(comb), dtype=torch.long)
-            # root_mask = torch.tensor([True] + [False] * (len(nodes) - 1), dtype=torch.bool)
-            label = self.label(comb)
-            
-            g = dgl.graph((edge_index[0], edge_index[1]))
-            g.ndata['feat'] = nodes
-            # g.ndata['root_mask'] = root_mask
-            data_list.append((g, label))
+        edges = list()
+        for i in range(1, num_nodes):
+            p = (i-1) >> 1
+            edges.append((i,p))
 
-        dim0, out_dim = self.get_dims()
+        return num_nodes, nodes, edges
+
+
+    def _add_neighbors(self, num_nodes, nodes, edges, root_neighbors, leaf_neighbors):
+        for i in range(root_neighbors):
+            edges.append((i+num_nodes, 0))
+
+        num_nodes += root_neighbors
+        leaf_base_idx = (2 ** self.depth) - 1
+        for i in range(2 ** self.depth):
+            for _ in range(leaf_neighbors[i]):
+                edges.append((num_nodes, i+leaf_base_idx))
+                num_nodes += 1
         
-        if self.seed is not None:
-            test_data, train_data = train_test_split(data_list, train_size=test_size, shuffle=True, stratify=[l for _, l in data_list], random_state=self.seed)
-            train_data, valid_data = train_test_split(data_list, train_size=train_size, shuffle=False, random_state=self.seed)
-        else:
-            test_data, train_data = train_test_split(data_list, train_size=test_size, shuffle=True, stratify=[l for _, l in data_list])
-            train_data, valid_data = train_test_split(data_list, train_size=train_size, shuffle=False)
+        nodes += [1] * (num_nodes - len(nodes))
 
-        return train_data, valid_data, test_data, dim0, out_dim
+        return num_nodes, nodes, edges
 
-    # Every sub-class should implement the following methods:
-    def get_combinations(self):
-        raise NotImplementedError
 
-    def get_nodes_features(self, combination):
-        raise NotImplementedError
+    def generate_data(self, train_size=0.8, valid_size=0.5, max_leaf_perm=1000, max_perm_examples=1000, max_examples=32000):
+        num_leaf_nodes = 2 ** self.depth
 
-    def label(self, combination):
-        raise NotImplementedError
+        num_perm_examples = min(num_leaf_nodes, max_perm_examples)
+        num_leaf_perm = min(max_leaf_perm, math.factorial(num_leaf_nodes), max_examples // num_perm_examples)
+        permutations = [self.rng.permutation(range(num_leaf_nodes)) for _ in range(num_leaf_perm)]
 
-    def get_dims(self):
-        raise NotImplementedError
+        # generate graphs
+        data_list = list()
+        print(f"Generating {num_leaf_perm * num_perm_examples} graphs...")
+        for perm in permutations:
+            for i in self.rng.permutation(range(num_leaf_nodes))[:num_perm_examples]:
+
+                leaf_neighbors = perm
+                root_neighbors = i
+
+                n, N, E = self._create_base_tree()
+                n, N, E = self._add_neighbors(n, N, E, root_neighbors, leaf_neighbors)
+
+                E = torch.tensor(E, dtype=torch.int).transpose(0,1)
+                N = torch.tensor(N, dtype=torch.int)
+
+                g = dgl.graph((E[0], E[1]), num_nodes=n)
+                g.ndata['feat'] = N
+                
+                label = np.where(leaf_neighbors == root_neighbors)[0][0] + num_leaf_nodes - 1
+
+                data_list.append((g, label))
+        
+        # split graphs into train, valid and test data
+        train_data, test_data = train_test_split(data_list, train_size=train_size, shuffle=True, stratify=[l for _, l in data_list], random_state=self.seed)
+        valid_data, test_data = train_test_split(test_data, train_size=valid_size, shuffle=False)
+
+        # return (train_data, valid_data, test_data, num_types, num_tree_nodes)
+        return train_data, valid_data, test_data, 2, self._num_tree_nodes()

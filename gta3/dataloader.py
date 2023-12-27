@@ -13,7 +13,7 @@ def transform_to_graph_list(dataset):
 
 class GTA3BaseDataset(Dataset):
 
-    def __init__(self, name, mode, phi_func, batch_size=10, force_reload=False, compute_class_weights=False):
+    def __init__(self, name, mode, phi_func, batch_size=10, force_reload=False, compute_class_weights=False, path_suffix=''):
         self.compute_class_weights = compute_class_weights
         self.batch_size = batch_size
         self.num_classes = None
@@ -36,10 +36,10 @@ class GTA3BaseDataset(Dataset):
             path = os.path.join(path, name, mode)
             if self.use_adj_matrix: path += '_adj'
             if self.use_shortest_dist: path += '_sd'
-            data_path = path + '_data.bin'
+            data_path = path + f'_data{path_suffix}.bin'
 
             if self.compute_class_weights: path += '_cw'
-            info_path = path + '_info.pkl'
+            info_path = path + f'_info{path_suffix}.pkl'
 
         # load data
         # > load preprocessed data if it exists
