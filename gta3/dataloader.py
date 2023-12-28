@@ -13,7 +13,7 @@ def transform_to_graph_list(dataset):
 
 class GTA3BaseDataset(Dataset):
 
-    def __init__(self, name, mode, phi_func, batch_size=10, force_reload=False, compute_class_weights=False):
+    def __init__(self, name, mode, phi_func, batch_size=10, force_reload=False, compute_class_weights=False, path_suffix=''):
         self.compute_class_weights = compute_class_weights
         self.batch_size = batch_size
         self.num_classes = None
@@ -36,10 +36,10 @@ class GTA3BaseDataset(Dataset):
             path = os.path.join(path, name, mode)
             if self.use_adj_matrix: path += '_adj'
             if self.use_shortest_dist: path += '_sd'
-            data_path = path + '_data.bin'
+            data_path = path + f'_data{path_suffix}.bin'
 
             if self.compute_class_weights: path += '_cw'
-            info_path = path + '_info.pkl'
+            info_path = path + f'_info{path_suffix}.pkl'
 
         # load data
         # > load preprocessed data if it exists
@@ -72,15 +72,12 @@ class GTA3BaseDataset(Dataset):
 
             # > including class weights
             if self.compute_class_weights:
-                graph_base_idx = idx * self.batch_size
-                graph_top_idx = graph_base_idx + self.batch_size
-                graph_top_idx = graph_top_idx if graph_top_idx < self.num_graphs else self.num_graphs
                 return (
                     self.batches[idx][0], 
                     self.batches[idx][1], 
                     self.batches[idx][2], 
                     self.batches[idx][3], 
-                    self.class_weights[graph_base_idx:graph_top_idx])
+                    self.batches[idx][4])
             
             # > without class weights
             return (
@@ -94,7 +91,7 @@ class GTA3BaseDataset(Dataset):
         if self.use_adj_matrix:
             phi_mat = self.graphs[idx].ndata['adj_mat']
         elif self.use_shortest_dist:
-            phi_mat = self.graphs[idx].ndata['adj_mat']
+            phi_mat = self.graphs[idx].ndata['short_dist_mat']
         else:
             phi_mat = None
 
@@ -105,7 +102,7 @@ class GTA3BaseDataset(Dataset):
                 self.graphs[idx].ndata['feat'], 
                 phi_mat, 
                 self._get_label(idx), 
-                self.class_weights[graph_base_idx:graph_top_idx])
+                self.class_weights[idx])
         
         # > without class weights
         return (
@@ -154,6 +151,7 @@ class GTA3BaseDataset(Dataset):
                 sd_mat = shortest_dist(g, return_paths=False)
                 for i in range(g.num_nodes()):
                     sd_mat[i][i] = 1 # set distance to self to 1 (equal to one message passing hop)
+                sd_mat = torch.where(sd_mat==-1, torch.zeros_like(sd_mat), sd_mat)
                 g.ndata['short_dist_mat'] = sd_mat
 
                 if idx % 50 == 0:
@@ -183,7 +181,13 @@ class GTA3BaseDataset(Dataset):
 
 
     def _create_batches(self):
+
+        # get the label size and additional feature dimension
         label_size = self._get_label(0).size(0)
+        if len(self.graphs[0].ndata['feat'].shape) > 1:
+            feat_dim = self.graphs[0].ndata['feat'].size(1)
+        else:
+            feat_dim = 0
 
         # pad graphs
         print(f"Creating batches (0/{self.num_graphs})..." + ' '*15, end="\r")
@@ -205,7 +209,8 @@ class GTA3BaseDataset(Dataset):
 
             # init new batch tensors
             batch_num_nodes = torch.zeros((curr_batch_size), dtype=torch.int) # TODO: dtype
-            batch_feat = torch.zeros((curr_batch_size, max_num_nodes), dtype=torch.int) # TODO: dtype
+            batch_feat_shape = (curr_batch_size, max_num_nodes) if feat_dim == 0 else (curr_batch_size, max_num_nodes, feat_dim)
+            batch_feat = torch.zeros(batch_feat_shape, dtype=torch.int) # TODO: dtype
             if self.use_adj_matrix or self.use_shortest_dist:
                 batch_phi_mat = torch.zeros((curr_batch_size, max_num_nodes, max_num_nodes), dtype=torch.int) # TODO: dtype
             else:
@@ -219,7 +224,7 @@ class GTA3BaseDataset(Dataset):
 
                 # > pad node features
                 batch_feat[idx, :g.num_nodes()] = g.ndata['feat']
-                batch_feat[idx, g.num_nodes():] = self.get_num_types() - 1 # Take last type, should be unused
+                batch_feat[idx, g.num_nodes():] = self.get_num_in_types() - 1 # Take last type, should be unused
                 
                 # > pad adjacency matrix
                 if self.use_adj_matrix:
@@ -240,8 +245,28 @@ class GTA3BaseDataset(Dataset):
                 else:
                     batch_label[idx, :label.size(0)] = label
 
-            self.batches.append((batch_num_nodes, batch_feat, batch_phi_mat, batch_label))
+            # process class weights and add batch to batches list
+            if self.compute_class_weights:
+                batch_class_weights = torch.concat([x.unsqueeze(0) for x in self.class_weights[graph_base_idx:graph_top_idx]], dim=0)
+                batch_class_weights = torch.mean(batch_class_weights, dim=0)
+                self.batches.append((batch_num_nodes, batch_feat, batch_phi_mat, batch_label, batch_class_weights))
+            else:
+                self.batches.append((batch_num_nodes, batch_feat, batch_phi_mat, batch_label))
 
             print(f"Creating batches ({graph_top_idx}/{self.num_graphs})...", end="\r")
         print(f"Creating batches ({self.num_graphs}/{self.num_graphs})...")
+    
             
+    def get_num_types(self):
+        raise NotImplementedError("GTA3BaseDataset: Implement the get_num_types function!")
+    
+
+    def get_num_in_types(self):
+        if self.batch_size > 1:
+            return self.get_num_types() + 1
+        else:
+            return self.get_num_types()
+        
+
+    def get_num_out_types(self):
+        return self.get_num_types()
