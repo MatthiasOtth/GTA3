@@ -99,7 +99,7 @@ class GTA3_NBM(GTA3BaseModel):
 
         # need two embeddings: one for the keys and one for the values
         # -> one is already created in the base model
-        self.embedding1 = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
+        self.embedding1 = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim']) # TODO
 
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
@@ -146,7 +146,7 @@ class GTA3_NBM(GTA3BaseModel):
 
         # forward pass
         preds = self.forward_step(x, A, lengths)
-
+        
         # compute loss
         train_loss = self.criterion(preds, labels.squeeze(-1).long())
 
@@ -174,10 +174,12 @@ class GTA3_NBM(GTA3BaseModel):
         preds = self.forward_step(x, A, lengths)
 
         # compute accuracy
-        valid_loss = self.accuracy_func(preds, labels.squeeze(-1).long())
+        total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)
+        preds = torch.argmax(preds, dim=-1)
+        accuracy = (preds == labels.squeeze(-1)).sum().float() / total
 
         # log accuracy
-        self.log("valid_accuracy", valid_loss, on_epoch=True, on_step=False, batch_size=batch_size)
+        self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
 
-        return valid_loss
+        return accuracy
     
