@@ -13,6 +13,8 @@ def main():
 		                help="Path to the config file to be used.")
     parser.add_argument('--force_reload', action="store_true",
 		                help="Will force the dataloader to reload the raw data and preprocess it instead of using cached data.")
+    parser.add_argument('--no_wandb', action="store_true",
+		                help="Will not use the WandB logger (useful for debugging).")
     args = parser.parse_args()
 
     # load the config
@@ -32,14 +34,17 @@ def main():
     # load the training data
     train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
     valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
-    config['model_params']['num_types'] = train_loader.get_num_types()
+    config['model_params']['num_in_types'] = train_loader.get_num_in_types()
 
     # load the model
     model = GTA3_ZINC(config['model_params'], config['train_params'])
 
     # train the model
-    logger = WandbLogger(entity="gta3", project='gta3', name=config['logging']['name'], save_dir=config['logging']['save_dir'], log_model='all',)
-    logger.log_hyperparams(config)
+    if not args.no_wandb:
+        logger = WandbLogger(project='gta3', log_model='all', save_dir=config['logging']['save_dir'], name=config['logging']['name'])
+        logger.log_hyperparams(config)
+    else:
+        logger = None
     trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, check_val_every_n_epoch=config['train_params']['valid_interval'])
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 

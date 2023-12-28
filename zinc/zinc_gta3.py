@@ -50,8 +50,12 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
         return self.labels[idx].unsqueeze(0)
 
 
+    def get_num_in_types(self):
+        return self.num_atom_types + 1 # additional 'padding' class
+    
+
     def get_num_types(self):
-        return self.num_atom_types + 1
+        return self.num_atom_types
 
 
 class GTA3_ZINC(GTA3BaseModel):

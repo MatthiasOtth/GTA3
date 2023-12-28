@@ -1,4 +1,6 @@
+import torch
 import torch.nn as nn
+import einops
 from torchmetrics.classification import MulticlassAccuracy
 from dgl import save_graphs, load_graphs
 from dgl.data import CLUSTERDataset
@@ -12,6 +14,7 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
 
     def __init__(self, mode, phi_func, batch_size=10, force_reload=False):
         self.mode = mode
+        print(f"batch_size = {batch_size}")
         super().__init__('cluster', mode, phi_func, batch_size=batch_size, force_reload=force_reload, compute_class_weights=True)
 
 
@@ -49,7 +52,11 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
         return self.graphs[idx].ndata['label']
 
 
-    def get_num_classes(self):
+    def get_num_types(self):
+        return self.num_classes + 1
+    
+
+    def get_num_out_types(self):
         return self.num_classes
         
 
@@ -62,11 +69,11 @@ class GTA3_CLUSTER(GTA3BaseModel):
         super().__init__(model_params, train_params)
 
         # final mlp to map the out dimension to a single value
-        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_classes']))
+        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
         
         # loss functions
         self.criterion = nn.CrossEntropyLoss()
-        self.accuracy_func = MulticlassAccuracy(model_params['num_classes'])
+        self.accuracy_func = MulticlassAccuracy(model_params['num_out_types'])
 
 
     def forward_step(self, x, A, lengths):
@@ -97,36 +104,43 @@ class GTA3_CLUSTER(GTA3BaseModel):
 
     def training_step(self, batch, batch_idx):
         lengths, x, A, labels, class_weights = batch
+        batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
 
         # forward pass
         preds = self.forward_step(x, A, lengths)
         
         # compute loss
+        if batch_size > 1:
+            preds = einops.rearrange(preds, 'b n d -> (b n) d')
+            labels = einops.rearrange(labels, 'b l -> (b l)')
         self.criterion.weight = class_weights
         train_loss = self.criterion(preds, labels.long())
 
         # log loss and alpha
         if self.per_layer_alpha:
             for l in range(len(self.gta3_layers)):
-                self.log(f"alpha/alpha_{l}", self.alpha[l], on_epoch=False, on_step=True, batch_size=1)
+                self.log(f"alpha/alpha_{l}", self.alpha[l], on_epoch=False, on_step=True, batch_size=batch_size)
         else:
-            self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=1)
-        self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
+            self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=batch_size)
+        self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return train_loss
     
 
     def validation_step(self, batch, batch_idx):
         lengths, x, A, labels, _ = batch
+        batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
 
         # forward pass
         preds = self.forward_step(x, A, lengths)
 
         # compute accuracy
-        valid_loss = self.accuracy_func(preds, labels)
+        total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)
+        preds = torch.argmax(preds, dim=-1)
+        accuracy = (preds == labels).sum().float() / total
 
         # log accuracy
-        self.log("valid_accuracy", valid_loss, on_epoch=True, on_step=False, batch_size=1)
+        self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
 
-        return valid_loss
+        return accuracy
     

@@ -89,9 +89,9 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
 
         # compute the dot products
         attention = torch.matmul(Q_h, K_h.transpose(-1,-2)).transpose(-1,-2)
-        
+
         #TODO: Optimize generation of mask
-        mask = torch.full((attention.shape[0], attention.shape[2]), False)
+        mask = torch.full((attention.shape[0], attention.shape[2]), False, device=attention.device)
         for i in range(lengths.shape[0]):
             mask[i,lengths[i]:] = True
         mask.unsqueeze_(1)
@@ -265,7 +265,7 @@ class GTA3BaseModel(L.LightningModule):
             raise ValueError("Invalid alpha model parameter!", model_params['alpha'])
 
         # creates an embedding depending on the node type
-        self.embedding = nn.Embedding(model_params['num_types'], model_params['hidden_dim'])
+        self.embedding = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
         
         # the main part of the model
         self.gta3_layers = nn.ModuleList(
