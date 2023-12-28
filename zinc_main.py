@@ -4,7 +4,9 @@ from pytorch_lightning.loggers import WandbLogger
 import json
 import os.path as osp
 import argparse
+
 from zinc.zinc_gta3 import GTA3_ZINC, GTA3_ZINC_Dataset
+from zinc.zinc_gnn import GNN_ZINC, GNN_ZINC_DataLoader
 
 def main():
     # arguments
@@ -32,12 +34,24 @@ def main():
     torch.set_float32_matmul_precision('medium')
 
     # load the training data
-    train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
-    valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
+    if config['model'] == 'gta3':
+        train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
+        valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
+    elif config['model'] in ('gcn', 'gat'):
+        train_loader = GNN_ZINC_DataLoader('train', batch_size=config['train_params']['batch_size'])
+        valid_loader = GNN_ZINC_DataLoader('valid', batch_size=config['train_params']['batch_size'])
+    else:
+        raise ValueError(f"Unkown model {config['model']} in config file {args.config}!")
+    
     config['model_params']['num_in_types'] = train_loader.get_num_in_types()
 
     # load the model
-    model = GTA3_ZINC(config['model_params'], config['train_params'])
+    if config['model'] == 'gta3':
+        model = GTA3_ZINC(config['model_params'], config['train_params'])
+    elif config['model'] in ('gcn', 'gat'):
+        model = GNN_ZINC(config['model'], config['model_params'], config['train_params'])
+    else:
+        raise ValueError(f"Unkown model {config['model']} in config file {args.config}!")
 
     # train the model
     if not args.no_wandb:

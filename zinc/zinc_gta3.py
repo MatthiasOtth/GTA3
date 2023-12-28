@@ -48,10 +48,6 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
     
     def _get_label(self, idx):
         return self.labels[idx].unsqueeze(0)
-
-
-    def get_num_in_types(self):
-        return self.num_atom_types + 1 # additional 'padding' class
     
 
     def get_num_types(self):
@@ -110,6 +106,7 @@ class GTA3_ZINC(GTA3BaseModel):
             for key in log_dict:
                 val, bs = log_dict[key]
                 self.log(key, val, on_epoch=True, on_step=False, batch_size=bs)
+                
         # combine resulting node embeddings
         h = torch.mean(h, dim=-2) # TODO: using mean for now
 
