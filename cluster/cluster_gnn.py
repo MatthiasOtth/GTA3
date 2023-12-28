@@ -14,18 +14,23 @@ class GNN_CLUSTER_DataLoader(GraphDataLoader):
         # load the cluster data
         print(f"Loading the {mode} CLUSTER data...", end='\r')
         self.dataset = CLUSTERDataset(mode=mode, raw_dir='./.dgl/')
+        self.num_classes = self.dataset.num_classes
         print(f"Loading the {mode} CLUSTER data...Done")
+
+        print(f"Adding self loops to the data...", end='\r')
+        self.dataset = list(map(add_self_loop, self.dataset))
+        print(f"Adding self loops to the data...Done")
 
         # setup the data loader
         super().__init__(self.dataset, batch_size=batch_size, drop_last=False)
 
 
     def get_num_in_types(self):
-        return self.dataset.num_classes + 1
+        return self.num_classes + 1
     
 
     def get_num_out_types(self):
-        return self.dataset.num_classes
+        return self.num_classes
 
 
 
@@ -70,7 +75,7 @@ class GNN_CLUSTER(GNNBaseModel):
 
 
     def training_step(self, batch, batch_idx):
-        g = add_self_loop(batch)
+        g = batch
         batch_size = len(g.batch_num_nodes())
 
         # forward pass
@@ -88,7 +93,7 @@ class GNN_CLUSTER(GNNBaseModel):
 
 
     def validation_step(self, batch, batch_idx):
-        g = add_self_loop(batch)
+        g = batch
         batch_size = len(g.batch_num_nodes())
 
         # forward pass

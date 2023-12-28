@@ -3,15 +3,15 @@
     "model_params": {
         "hidden_dim": 64,
         "out_dim": 64,
-        "num_heads": 2,
-        "num_layers": 4
+        "num_heads": 4,
+        "num_layers": 8
     },
     "train_params": {
         "lr": 1e-4,
-        "max_epochs": 10,
+        "max_epochs": 100,
         "valid_interval": 2,
         "seed": 0,
-        "batch_size": 32
+        "batch_size": 64
     },
     "logging": {
         "save_dir": "logs/cluster",
