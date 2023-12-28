@@ -1,0 +1,20 @@
+{
+    "model": "gat",
+    "model_params": {
+        "hidden_dim": 64,
+        "out_dim": 64,
+        "num_heads": 2,
+        "num_layers": 4
+    },
+    "train_params": {
+        "lr": 1e-4,
+        "max_epochs": 10,
+        "valid_interval": 2,
+        "seed": 0,
+        "batch_size": 32
+    },
+    "logging": {
+        "save_dir": "logs/cluster",
+        "name": "cluster_gat"
+    }
+}
