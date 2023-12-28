@@ -4,7 +4,6 @@ from pytorch_lightning.loggers import WandbLogger
 import json
 import os.path as osp
 import argparse
-
 from zinc.zinc_gta3 import GTA3_ZINC, GTA3_ZINC_Dataset
 
 def main():

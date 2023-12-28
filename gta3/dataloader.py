@@ -26,7 +26,7 @@ class GTA3BaseDataset(Dataset):
         self.use_adj_matrix = False
         if phi_func == 'test':
             self.use_adj_matrix = True
-        elif phi_func == 'inverse_hops':
+        elif phi_func == 'inverse_hops' or phi_func == 'alpha_pow_dist':
             self.use_shortest_dist = True
         else:
             raise ValueError(f"Invalid value for phi_func: '{phi_func}'!")
