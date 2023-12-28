@@ -73,7 +73,6 @@ class GTA3_CLUSTER(GTA3BaseModel):
         
         # loss functions
         self.criterion = nn.CrossEntropyLoss()
-        self.accuracy_func = MulticlassAccuracy(model_params['num_out_types'])
 
 
     def forward_step(self, x, A, lengths):

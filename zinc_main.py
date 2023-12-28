@@ -41,7 +41,7 @@ def main():
 
     # train the model
     if not args.no_wandb:
-        logger = WandbLogger(project='gta3', log_model='all', save_dir=config['logging']['save_dir'], name=config['logging']['name'])
+        logger = WandbLogger(entity='gta3', project='gta3', name=config['logging']['name'], save_dir=config['logging']['save_dir'], log_model='all',)
         logger.log_hyperparams(config)
     else:
         logger = None
