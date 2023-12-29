@@ -7,48 +7,61 @@ Useful links:
 
 ## TODOs
 
-- [ ] Implement neighbors match problem ([github](https://github.com/tech-srl/bottleneck))
+- [ ] Debug neighbors match problem ([github](https://github.com/tech-srl/bottleneck))
 - [ ] Define configs resulting in ~500K parameters
 - [ ] Replicate benchmark setting of another paper. -> Use simple LR scheduler, fixed parameter budget, max 12h runtime etc.
+- [ ] Implement positional embeddings
 
 ## Models
 
 ### ZINC model
 
-Default config can be found under `config/zinc/gta3_default.json`. Reference: [dgl ZINCDataset](https://docs.dgl.ai/generated/dgl.data.ZINCDataset.html#dgl.data.ZINCDataset)
+Use `zinc_main.py` together with a config file. Configs can be found under `config/zinc/`. Reference: [dgl ZINCDataset](https://docs.dgl.ai/generated/dgl.data.ZINCDataset.html#dgl.data.ZINCDataset)
 
 ```
-usage: zinc_main.py [-h] [--force_reload] config
-
-Main program to train and evaluate models based on the ZINC dataset.
+zinc_main.py config [--force_reload] [--no_wandb]
 
 positional arguments:
-  config          Path to the config file to be used.
+  config              Path to the config file to be used.
 
 optional arguments:
-  -h, --help      show this help message and exit
-  --force_reload  Will force the dataloader to reload the raw data and preprocess it instead of using cached data.
+  --force_reload      Will force the dataloader to reload the raw data and preprocess it instead of using cached data.
+  --no_wandb          Will not use the WandB logger (useful for debugging).
 ```
 
 ### CLUSTER model
 
-Default config can be found under `config/zinc/gta3_default.json`. Reference: [dgl CLUSTERDataset](https://docs.dgl.ai/generated/dgl.data.CLUSTERDataset.html)
+Use `cluster_main.py` together with a config file. Configs can be found under `config/cluster/`. Reference: [dgl CLUSTERDataset](https://docs.dgl.ai/generated/dgl.data.CLUSTERDataset.html)
 
 ```
-usage: cluster_main.py [-h] [--force_reload] config
-
-Main program to train and evaluate models based on the CLUSTER dataset.
+cluster_main.py config [--force_reload] [--no_wandb]
 
 positional arguments:
-  config          Path to the config file to be used.
+  config              Path to the config file to be used.
 
 optional arguments:
-  -h, --help      show this help message and exit
-  --force_reload  Will force the dataloader to reload the raw data and preprocess it instead of using cached data.
+  --force_reload      Will force the dataloader to reload the raw data and preprocess it instead of using cached data.
+  --no_wandb          Will not use the WandB logger (useful for debugging).
+```
+
+### Neighborhoodmatch model
+
+Use `nbm_main.py` together with a config file. Configs can be found under `config/nbm/`. Reference: [On the Bottleneck of Graph Neural Networks and its Practical Implications - Uri Alon, Eran Yahav](https://arxiv.org/abs/2006.05205)
+
+```
+nbm_main.py config [--force_reload] [--force_regenerate] [--no_wandb]
+
+positional arguments:
+  config              Path to the config file to be used.
+
+optional arguments:
+  --force_reload      Will force the dataloader to reload the raw data and preprocess it instead of using cached data.
+  --force_regenerate  Will force the dataloader to regenerate the raw data.
+  --no_wandb          Will not use the WandB logger (useful for debugging).
 ```
 
 
-## Cluster Setup (not the CLUSTER dataset)
+## Setup
 
 ### Conda Using Requirements File
 
@@ -62,9 +75,22 @@ The following commands are sufficient to install everything needed to run the mo
 conda install -c conda-forge lightning
 conda install -c dglteam dgl
 conda install -c esri einops
+conda install -c conda-forge wandb
+conda install -c conda-forge scikit-learn
+```
+
+Note: The GNN models might require a cuda version of dgl. The available packages can be found under [DGL Installation](https://www.dgl.ai/pages/start.html).
+
+```
+# dgl for cuda v12.1 using conda:
+conda install -c dglteam/label/cu121 dgl
+
+# the conda installation might not work properly, instead use the default dgl from above and install the cuda part using pip:
+pip install  dgl -f https://data.dgl.ai/wheels/cu121/repo.html
+pip install  dglgo -f https://data.dgl.ai/wheels-test/repo.html
 ```
 
 
 ## GTA3 Model
 
-Base implementation under `gta3/`. Dataset specific implementations under `zinc/` and `cluster/`.
+Base implementation under `gta3/`. Dataset specific implementations under `zinc/`, `cluster/` and `neighborsmatch/`.
