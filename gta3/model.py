@@ -58,7 +58,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=bias)
         self.V = nn.Linear(in_dim, out_dim * num_heads, bias=bias)
 
-        self.softmax = nn.Softmax(dim=-2)
+        self.softmax = nn.Softmax(dim=-1)
         self.phi = phi
 
 
@@ -88,25 +88,25 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         V_h = einops.rearrange(V_h, 'b n (k d) -> b k n d', d=self.out_dim)
 
         # compute the dot products
-        attention = torch.matmul(Q_h, K_h.transpose(-1,-2)).transpose(-1,-2)
+        attention = torch.matmul(Q_h, K_h.transpose(-1,-2))
 
         #TODO: Optimize generation of mask
         mask = torch.full((attention.shape[0], attention.shape[2]), False, device=attention.device)
         for i in range(lengths.shape[0]):
             mask[i,lengths[i]:] = True
         mask.unsqueeze_(1)
-        mask.unsqueeze_(-1)
-        
+        mask.unsqueeze_(2)
+        #Mask: [batch, 1, 1, nodes]
         attention = attention.masked_fill(mask, float('-inf'))
         # apply scaling and softmax to attention
         attention = self.softmax(attention / self.sqrt_out_dim)
 
         mask = mask.moveaxis(-2,-1)
+        # Mask: [batch, 1, nodes, 1]
         attention = attention.masked_fill(mask, float(0))
        
         # reweight using the adjacency information
         attention = attention.moveaxis(1,0)
-        attention = attention.transpose(-1,-2)
         log_dict = {}
         log_dict["attention/attention_pre_transform_d1"]  = attention[:,A==1].mean(), attention[:,A==1].reshape(-1).shape[0]
         log_dict["attention/attention_pre_transform_d2+"] = attention[:,A >1].mean(), attention[:,A >1].reshape(-1).shape[0]
