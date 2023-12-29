@@ -267,6 +267,17 @@ class GTA3BaseModel(L.LightningModule):
         # creates an embedding depending on the node type
         self.embedding = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
         
+        # positional embeddings
+        self.use_pos_enc = False
+        if model_params['pos_encoding'] == 'laplacian':
+            self.use_pos_enc = True
+            self.pos_embedding = nn.Linear(model_params['pos_enc_dim'], model_params['hidden_dim'])
+        elif model_params['pos_encoding'] == 'wl':
+            self.use_pos_enc = True
+            self.pos_embedding = nn.Embedding(model_params['max_num_nodes'], model_params['hidden_dim'])
+        elif model_params['pos_encoding'] != 'none':
+            raise ValueError(f"Unknown positional encoding parameter '{model_params['pos_encoding']}'!")
+
         # the main part of the model
         self.gta3_layers = nn.ModuleList(
             [ GTA3Layer(

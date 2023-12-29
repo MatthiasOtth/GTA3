@@ -11,9 +11,9 @@ from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
 class GTA3_ZINC_Dataset(GTA3BaseDataset):
 
-    def __init__(self, mode, phi_func, batch_size=10, force_reload=False):
+    def __init__(self, mode, phi_func, pos_enc, batch_size=10, force_reload=False, pos_enc_dim=8):
         self.mode = mode
-        super().__init__('zinc', mode, phi_func, batch_size=batch_size, force_reload=force_reload)
+        super().__init__('zinc', mode, phi_func, pos_enc, batch_size=batch_size, force_reload=force_reload, pos_enc_dim=pos_enc_dim)
 
 
     def _load_raw_data(self, data_path, info_path):
@@ -84,7 +84,7 @@ class GTA3_ZINC(GTA3BaseModel):
         self.valid_loss_func = nn.L1Loss()
 
 
-    def forward_step(self, x, A, lengths):
+    def forward_step(self, x, A, pos_enc, lengths):
         """
             Input:
             - x: [B, N]
@@ -96,6 +96,11 @@ class GTA3_ZINC(GTA3BaseModel):
 
         # create embeddings
         h = self.embedding(x)
+
+        # add positional embeddings
+        if self.use_pos_enc:
+            h_pos = self.pos_embedding(pos_enc)
+            h = h + h_pos
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
@@ -115,10 +120,10 @@ class GTA3_ZINC(GTA3BaseModel):
 
 
     def training_step(self, batch, batch_idx):
-        lengths, x, A, y_true = batch
+        lengths, x, A, pos_enc, y_true = batch
 
         # forward pass
-        y_pred = self.forward_step(x, A, lengths)
+        y_pred = self.forward_step(x, A, pos_enc, lengths)
 
         # compute loss
         if self.train_alpha:
@@ -138,10 +143,10 @@ class GTA3_ZINC(GTA3BaseModel):
     
 
     def validation_step(self, batch, batch_idx):
-        lengths, x, A, y_true = batch
+        lengths, x, A, pos_enc, y_true = batch
 
         # forward pass
-        y_pred = self.forward_step(x, A, lengths)
+        y_pred = self.forward_step(x, A, pos_enc, lengths)
 
         # compute loss
         valid_loss = self.valid_loss_func(y_pred, y_true)

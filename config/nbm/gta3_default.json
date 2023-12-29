@@ -10,6 +10,8 @@
         "alpha_weight": 0,
         "num_heads": 4,
         "num_layers": 3,
+        "pos_encoding": "none",
+        "pos_enc_dim": 8,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,

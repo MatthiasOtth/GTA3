@@ -9,7 +9,9 @@
         "alpha_init": 0.3,
         "alpha_weight": 0,
         "num_heads": 4,
-        "num_layers": 4,
+        "num_layers": 6,
+        "pos_encoding": "wl",
+        "pos_enc_dim": 8,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,
@@ -17,10 +19,10 @@
     },
     "train_params": {
         "lr": 1e-4,
-        "max_epochs": 30,
+        "max_epochs": 100,
         "valid_interval": 2,
         "seed": 0,
-        "batch_size": 32
+        "batch_size": 64
     },
     "logging": {
         "save_dir": "logs/zinc",

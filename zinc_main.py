@@ -37,8 +37,11 @@ def main():
 
     # load the training data
     if config['model'] == 'gta3':
-        train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
-        valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
+        pos_enc_dim = config['model_params']['pos_enc_dim'] if 'pos_enc_dim' in config['model_params'] else None
+        train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'], pos_enc=config['model_params']['pos_encoding'],
+                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+        valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], pos_enc=config['model_params']['pos_encoding'],
+                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
     elif config['model'] in ('gcn', 'gat'):
         train_loader = GNN_ZINC_DataLoader('train', batch_size=config['train_params']['batch_size'])
         valid_loader = GNN_ZINC_DataLoader('valid', batch_size=config['train_params']['batch_size'])
@@ -46,6 +49,7 @@ def main():
         raise ValueError(f"Unkown model {config['model']} in config file {args.config}!")
     
     config['model_params']['num_in_types'] = train_loader.get_num_in_types()
+    config['model_params']['max_num_nodes'] = 37
 
     # load the model
     if config['model'] == 'gta3':
