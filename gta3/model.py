@@ -104,14 +104,13 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         mask = mask.moveaxis(-2,-1)
         # Mask: [batch, 1, nodes, 1]
         attention = attention.masked_fill(mask, float(0))
-       
         # reweight using the adjacency information
         attention = attention.moveaxis(1,0)
         log_dict = {}
         log_dict["attention/attention_pre_transform_d1"]  = attention[:,A==1].mean(), attention[:,A==1].reshape(-1).shape[0]
         log_dict["attention/attention_pre_transform_d2+"] = attention[:,A >1].mean(), attention[:,A >1].reshape(-1).shape[0]
 
-        attention = self.phi(attention, A, alpha)
+        attention = self.phi(attention, A.transpose(-1,-2), alpha)
 
         log_dict["attention/attention_post_transform_d1"]  = attention[:,A==1].mean(), attention[:,A==1].reshape(-1).shape[0]
         log_dict["attention/attention_post_transform_d2+"] = attention[:,A >1].mean(), attention[:,A >1].reshape(-1).shape[0]
