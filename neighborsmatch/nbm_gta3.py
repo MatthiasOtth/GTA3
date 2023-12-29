@@ -118,7 +118,7 @@ class GTA3_NBM(GTA3BaseModel):
 
         """
         self.alpha = self.alpha.to(device=self.device)
-
+        A_T = A.transpose(1,2)
         # create embeddings
         # h = self.embedding(x)
         x_key, x_type = x[..., 0], x[..., 1]
@@ -129,15 +129,31 @@ class GTA3_NBM(GTA3BaseModel):
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
             if self.per_layer_alpha: 
-                h = layer.forward(h, A, lengths, self.alpha[idx])
+                h, log_dict = layer.forward(h, A_T, lengths, self.alpha[idx])
             else:
-                h = layer.forward(h, A, lengths, self.alpha)
+                h, log_dict = layer.forward(h, A_T, lengths, self.alpha)
+            for key in log_dict:
+                val, bs = log_dict[key]
+                self.log(key, val, on_epoch=True, on_step=False, batch_size=bs)
 
         # extract embedding of the root node (root is always first node)
-        h = h[:,0,:]
+        root_embed = h[:,0,:]
 
         # pass through final mlp
-        return self.out_mlp(h)
+        out = self.out_mlp(root_embed)
+        # if out.requires_grad:
+        #     if not self.skipped:
+        #         self.skipped = True
+        #         print("Skipped")
+        #     else:
+        #         print("Grad")
+        #         out.sum().backward()
+        #         print(self.embedding1.weight.grad.sum())
+        #         print(self.embedding.weight.grad.sum())
+        #         print(self.out_mlp[0].weight.grad.sum())
+        # else:
+        #     print("No grad")
+        return out
 
 
     def training_step(self, batch, batch_idx):
@@ -157,7 +173,6 @@ class GTA3_NBM(GTA3BaseModel):
         else:
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=batch_size)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
-
         return train_loss
     
 
