@@ -1,5 +1,6 @@
 {
     "model": "gat",
+    "dataset": "cluster",
     "model_params": {
         "hidden_dim": 64,
         "out_dim": 64,

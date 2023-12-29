@@ -21,6 +21,7 @@ class GNNBaseModel(L.LightningModule):
         super().__init__()
 
         self.train_params = train_params
+        self.use_residual = model_params['residual']
 
         # creates an embedding depending on the node type
         self.embedding = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
@@ -38,7 +39,8 @@ class GNNBaseModel(L.LightningModule):
             assert model_params['hidden_dim'] % model_params['num_heads'] == 0, f"GNNBaseModel Error: out_dim ({model_params['hidden_dim']}) must be divisible by num_heads ({model_params['num_heads']})!"
 
             self.gnn_layers = nn.ModuleList(
-                [GATConv(model_params['hidden_dim'], model_params['hidden_dim'] // model_params['num_heads'], model_params['num_heads'], activation=F.relu) for _ in range(model_params['num_layers'] - 1)]
+                [GATConv(model_params['hidden_dim'], model_params['hidden_dim'] // model_params['num_heads'], model_params['num_heads'], activation=F.relu) 
+                 for _ in range(model_params['num_layers'] - 1)]
             )
             self.gnn_layers.append(GATConv(model_params['hidden_dim'], model_params['out_dim'] // model_params['num_heads'], model_params['num_heads']))
         
@@ -46,7 +48,12 @@ class GNNBaseModel(L.LightningModule):
         else:
             raise ValueError(f"GNNBaseModel: Unkown gnn type '{gnn_type}'!")
         
-        
+        # layer norm
+        self.use_layer_norm = False
+        if model_params['layer_norm']:
+            self.use_layer_norm = True
+            self.layer_norm = nn.ModuleList([nn.LayerNorm(model_params['hidden_dim']) for _ in range(model_params['num_layers'] - 1)])
+            self.layer_norm.append(nn.LayerNorm(model_params['out_dim']))
 
 
     def training_step(self, batch, batch_idx):

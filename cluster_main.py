@@ -26,6 +26,8 @@ def main():
     config = None
     with open(args.config) as config_file:
         config = json.load(config_file)
+    if config['dataset'] != 'cluster':
+        raise ValueError(f"Config is for the wrong dataset! Expecting 'cluster', got {config['dataset']}!")
 
     # set the seed if we are using one
     if config['train_params']['seed'] is not None:

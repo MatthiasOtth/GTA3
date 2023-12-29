@@ -1,0 +1,24 @@
+{
+    "model": "gat",
+    "dataset": "neighborsmatch",
+    "model_params": {
+        "hidden_dim": 32,
+        "out_dim": 32,
+        "num_heads": 4,
+        "num_layers": 6,
+        "residual": true,
+        "layer_norm": true
+    },
+    "train_params": {
+        "lr": 1e-3,
+        "max_epochs": 100,
+        "valid_interval": 2,
+        "seed": 0,
+        "batch_size": 64,
+        "tree_depth": 3
+    },
+    "logging": {
+        "save_dir": "logs/nbm",
+        "name": "nbm_gat"
+    }
+}
