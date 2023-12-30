@@ -100,7 +100,6 @@ class GTA3_NBM(GTA3BaseModel):
         # need two embeddings: one for the keys and one for the values
         # -> one is already created in the base model
         self.embedding1 = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim']) # TODO
-
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
         
@@ -133,7 +132,7 @@ class GTA3_NBM(GTA3BaseModel):
                 h, log_dict = layer.forward(h, A, lengths, self.alpha)
             for key in log_dict:
                 val, bs = log_dict[key]
-                self.log(key, val, on_epoch=True, on_step=False, batch_size=bs)
+                self.log(key+"_layer"+str(idx), val, on_epoch=True, on_step=False, batch_size=bs)
         # extract embedding of the root node (root is always first node)
         h = h[:,0,:]
 
