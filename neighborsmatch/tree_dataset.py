@@ -72,7 +72,7 @@ class TreeDataset():
         return num_nodes, nodes, edges
 
 
-    def generate_data(self, train_size=0.8, valid_size=0.5, max_leaf_perm=1000, max_perm_examples=1000, max_examples=32000):
+    def generate_data(self, train_size=0.8, valid_size=0.5, max_leaf_perm=1000, max_perm_examples=1000, max_examples=64000):
         num_leaf_nodes = 2 ** self.depth
 
         num_perm_examples = min(num_leaf_nodes, max_perm_examples)
@@ -130,4 +130,4 @@ class TreeDataset():
 
         # return (train_data, valid_data, test_data, num_types, num_tree_nodes)
         # return train_data, valid_data, test_data, max_n, self._num_tree_nodes()
-        return train_data, valid_data, test_data, (self.depth ** 2) + 1, self.depth ** 2
+        return train_data, valid_data, test_data, (2**self.depth) + 1, 2 ** self.depth 

@@ -107,13 +107,14 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         # reweight using the adjacency information
         attention = attention.moveaxis(1,0)
         log_dict = {}
-        log_dict["attention/attention_pre_transform_d1"]  = attention[:,A==1].mean(), attention[:,A==1].reshape(-1).shape[0]
-        log_dict["attention/attention_pre_transform_d2+"] = attention[:,A >1].mean(), attention[:,A >1].reshape(-1).shape[0]
+        A_t = A.transpose(-1,-2)
+        log_dict["attention/attention_pre_transform_d1"]  = attention[:,A_t==1].mean(), attention[:,A_t==1].reshape(-1).shape[0]
+        log_dict["attention/attention_pre_transform_d2+"] = attention[:,A_t >1].mean(), attention[:,A_t >1].reshape(-1).shape[0]
 
-        attention = self.phi(attention, A.transpose(-1,-2), alpha)
+        attention = self.phi(attention, A_t, alpha)
 
-        log_dict["attention/attention_post_transform_d1"]  = attention[:,A==1].mean(), attention[:,A==1].reshape(-1).shape[0]
-        log_dict["attention/attention_post_transform_d2+"] = attention[:,A >1].mean(), attention[:,A >1].reshape(-1).shape[0]
+        log_dict["attention/attention_post_transform_d1"]  = attention[:,A_t==1].mean(), attention[:,A_t==1].reshape(-1).shape[0]
+        log_dict["attention/attention_post_transform_d2+"] = attention[:,A_t >1].mean(), attention[:,A_t >1].reshape(-1).shape[0]
         attention = attention.moveaxis(0,1)
         
         # sum value tensors scaled by the attention weights
