@@ -19,10 +19,13 @@
     },
     "train_params": {
         "lr": 1e-4,
+        "weight_decay": 0.0,
         "max_epochs": 100,
         "valid_interval": 2,
         "seed": 0,
-        "batch_size": 64
+        "batch_size": 64,
+        "lr_reduce_factor": 0.5,
+        "lr_schedule_patience": 2
     },
     "logging": {
         "save_dir": "logs/zinc",

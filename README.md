@@ -10,7 +10,7 @@ Useful links:
 - [x] Debug neighbors match problem ([github](https://github.com/tech-srl/bottleneck))
 - [x] Define configs resulting in ~500K parameters
 - [x] Implement positional embeddings
-- [ ] Replicate benchmark setting of another paper. -> Use simple LR scheduler, fixed parameter budget, max 12h runtime etc.
+- [x] Replicate benchmark setting of another paper. -> Use simple LR scheduler, fixed parameter budget, max 12h runtime etc. 
 - [ ] Rework neighborsmatch to match our preferred design
 - [ ] Define what we want to benchmark, including ablations
 - [ ] Run all the jobs
