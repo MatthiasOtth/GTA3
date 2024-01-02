@@ -42,9 +42,12 @@ def main():
                                          batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
         valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], pos_enc=config['model_params']['pos_encoding'],
                                          batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+        test_loader  = GTA3_ZINC_Dataset('test', phi_func=config['model_params']['phi'], pos_enc=config['model_params']['pos_encoding'],
+                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
     elif config['model'] in ('gcn', 'gat'):
         train_loader = GNN_ZINC_DataLoader('train', batch_size=config['train_params']['batch_size'])
         valid_loader = GNN_ZINC_DataLoader('valid', batch_size=config['train_params']['batch_size'])
+        test_loader  = GNN_ZINC_DataLoader('test', batch_size=config['train_params']['batch_size'])
     else:
         raise ValueError(f"Unkown model {config['model']} in config file {args.config}!")
     
@@ -67,6 +70,9 @@ def main():
         logger = None
     trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, check_val_every_n_epoch=config['train_params']['valid_interval'])
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
+
+    # evaluate the model
+    trainer.test(model=model, test_dataloaders=test_loader, verbose=True)
 
 
 if __name__ == '__main__':
