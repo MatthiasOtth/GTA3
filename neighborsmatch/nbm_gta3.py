@@ -13,14 +13,14 @@ from gta3.dataloader import GTA3BaseDataset, transform_to_graph_list
 
 class GTA3_NBM_Dataset(GTA3BaseDataset):
 
-    def __init__(self, mode, phi_func, tree_depth, batch_size=10, force_reload=False, force_regenerate=False, generator_seed=None):
+    def __init__(self, mode, phi_func, pos_enc, tree_depth, batch_size=10, force_reload=False, force_regenerate=False, generator_seed=None, pos_enc_dim=8):
         self.mode = mode
         self.depth = tree_depth
         self.generator_seed = generator_seed
         self.raw_path = osp.join(".", ".dgl", f"nbmraw_{self.depth}")
         self.force_regenerate = force_regenerate
 
-        super().__init__('nbm', mode, phi_func, batch_size=batch_size, force_reload=force_reload, path_suffix=f'_{self.depth}')
+        super().__init__('nbm', mode, phi_func, pos_enc, batch_size=batch_size, force_reload=force_reload, pos_enc_dim=pos_enc_dim, path_suffix=f'_{self.depth}')
 
 
     def _generate_data(self):
@@ -89,6 +89,10 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
         return self.num_tree_nodes
     
 
+    def max_num_nodes(self):
+        return self.graphs[0].num_nodes() # each graph should be equally big
+    
+
 
 class GTA3_NBM(GTA3BaseModel):
     
@@ -107,7 +111,7 @@ class GTA3_NBM(GTA3BaseModel):
         self.criterion = nn.CrossEntropyLoss()
 
 
-    def forward_step(self, x, A, lengths):
+    def forward_step(self, x, A, pos_enc, lengths):
         """
             Input:
             - x: [B, N, 2]
@@ -123,6 +127,11 @@ class GTA3_NBM(GTA3BaseModel):
         h_key = self.embedding(x_key)
         h_type = self.embedding1(x_type)
         h = h_key + h_type
+
+        # add positional embeddings
+        if self.use_pos_enc:
+            h_pos = self.pos_embedding(pos_enc)
+            h = h + h_pos
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
@@ -141,11 +150,11 @@ class GTA3_NBM(GTA3BaseModel):
 
 
     def training_step(self, batch, batch_idx):
-        lengths, x, A, labels = batch
+        lengths, x, A, pos_enc, labels = batch
         batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
 
         # forward pass
-        preds = self.forward_step(x, A, lengths)
+        preds = self.forward_step(x, A, pos_enc, lengths)
         
         # compute loss
         train_loss = self.criterion(preds, labels.squeeze(-1).long())
@@ -162,7 +171,7 @@ class GTA3_NBM(GTA3BaseModel):
     
 
     def validation_step(self, batch, batch_idx):
-        lengths, x, A, labels = batch
+        lengths, x, A, pos_enc, labels = batch
         batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
 
         # print(x)
@@ -171,7 +180,7 @@ class GTA3_NBM(GTA3BaseModel):
         # exit()
 
         # forward pass
-        preds = self.forward_step(x, A, lengths)
+        preds = self.forward_step(x, A, pos_enc, lengths)
 
         # compute accuracy
         total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)

@@ -39,11 +39,14 @@ def main():
 
     # load the training data
     if config['model'] == 'gta3':
+        pos_enc_dim = config['model_params']['pos_enc_dim'] if 'pos_enc_dim' in config['model_params'] else None
         train_loader = GTA3_NBM_Dataset('train', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'], 
-                                        batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, 
-                                        force_regenerate=args.force_regenerate, generator_seed=config['train_params']['seed'])
+                                        pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
+                                        force_reload=args.force_reload, force_regenerate=args.force_regenerate, 
+                                        generator_seed=config['train_params']['seed'], pos_enc_dim=pos_enc_dim)
         valid_loader = GTA3_NBM_Dataset('valid', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'], 
-                                        batch_size=config['train_params']['batch_size'], force_reload=args.force_reload)
+                                        pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
+                                        force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
     elif config['model'] in ('gcn', 'gat'):
         train_loader = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
                                           force_regenerate=args.force_regenerate, generator_seed=config['train_params']['seed'])
@@ -54,6 +57,7 @@ def main():
     
     config['model_params']['num_in_types'] = train_loader.get_num_in_types()
     config['model_params']['num_out_types'] = train_loader.get_num_out_types()
+    config['model_params']['max_num_nodes'] = train_loader.max_num_nodes()
 
     # load the model
     if config['model'] == 'gta3':
