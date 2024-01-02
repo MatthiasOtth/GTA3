@@ -68,6 +68,10 @@ class GTA3_CLUSTER(GTA3BaseModel):
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
+        # init score name and direction for lr scheduler
+        self.score_name = 'valid_accuracy'
+        self.score_direction = 'max'
+
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
         
@@ -128,6 +132,8 @@ class GTA3_CLUSTER(GTA3BaseModel):
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=batch_size)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
 
+        self.log("lr", self.trainer.optimizers[0].param_groups[0]['lr'], on_epoch=False, on_step=True, batch_size=batch_size)
+
         return train_loss
     
 
@@ -145,6 +151,24 @@ class GTA3_CLUSTER(GTA3BaseModel):
 
         # log accuracy
         self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+
+        return accuracy
+
+
+    def test_step(self, batch, batch_idx):
+        lengths, x, A, pos_enc, labels, _ = batch
+        batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
+
+        # forward pass
+        preds = self.forward_step(x, A, pos_enc, lengths)
+
+        # compute accuracy
+        total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)
+        preds = torch.argmax(preds, dim=-1)
+        accuracy = (preds == labels).sum().float() / total
+
+        # log accuracy
+        self.log("test_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return accuracy
     

@@ -228,6 +228,8 @@ class GTA3Layer(nn.Module):
     
 
 class GTA3BaseModel(L.LightningModule):
+    score_direction = None
+    score_name = None
     
     def __init__(self, model_params, train_params):
         """
@@ -299,9 +301,27 @@ class GTA3BaseModel(L.LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
-        raise NotImplementedError("GTA3BaseModel: Define training_step function!")
+        raise NotImplementedError("GTA3BaseModel: Define validation_step function!")
+
+    
+    def test_step(self, batch, batch_idx):
+        raise NotImplementedError("GTA3BaseModel: Define test_step function!")
 
 
     def configure_optimizers(self):
+        if not hasattr(self, "score_direction") or self.score_direction is None:
+            raise NotImplementedError("GTA3BaseModel: Define score_direction attribute! (min|max)")
+        if not hasattr(self, "score_name") or self.score_name is None:
+            raise NotImplementedError("GTA3BaseModel: Define score_name attribute! (e.g. 'val_loss')")
         optimizer = optim.Adam(self.parameters(), lr=self.train_params['lr'])
-        return optimizer
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode=self.score_direction,
+            factor=self.train_params['lr_reduce_factor'],
+            patience=self.train_params['lr_schedule_patience'],
+            verbose=True
+        )
+        return (
+            [optimizer],
+            [{'scheduler': scheduler, 'interval': 'epoch', 'monitor': self.score_name}]
+        )

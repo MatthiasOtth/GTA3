@@ -101,6 +101,10 @@ class GTA3_NBM(GTA3BaseModel):
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
+        # setup score name and direction for lr scheduler
+        self.score_name = "valid_accuracy"
+        self.score_direction = "max"
+
         # need two embeddings: one for the keys and one for the values
         # -> one is already created in the base model
         self.embedding1 = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim']) # TODO
@@ -167,6 +171,8 @@ class GTA3_NBM(GTA3BaseModel):
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=batch_size)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
 
+        self.log("lr", self.trainer.optimizers[0].param_groups[0]['lr'], on_epoch=False, on_step=True, batch_size=batch_size)
+
         return train_loss
     
 
@@ -189,6 +195,24 @@ class GTA3_NBM(GTA3BaseModel):
 
         # log accuracy
         self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+
+        return accuracy
+
+
+    def test_step(self, batch, batch_idx):
+        lengths, x, A, pos_enc, labels = batch
+        batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
+
+        # forward pass
+        preds = self.forward_step(x, A, pos_enc, lengths)
+
+        # compute accuracy
+        total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)
+        preds = torch.argmax(preds, dim=-1)
+        accuracy = (preds == labels.squeeze(-1)).sum().float() / total
+
+        # log accuracy
+        self.log("test_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return accuracy
     

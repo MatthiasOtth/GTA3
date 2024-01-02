@@ -61,6 +61,10 @@ class GTA3_ZINC(GTA3BaseModel):
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
+        # set the score direction and name for lr scheduler
+        self.score_direction = "min"
+        self.score_name = "valid_loss"
+
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, 1))
         # self.out_mlp = nn.Sequential(
@@ -139,6 +143,8 @@ class GTA3_ZINC(GTA3BaseModel):
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=1)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
 
+        self.log("lr", self.trainer.optimizers[0].param_groups[0]['lr'], on_epoch=False, on_step=True, batch_size=1)
+
         return train_loss
     
 
@@ -153,6 +159,21 @@ class GTA3_ZINC(GTA3BaseModel):
 
         # log loss
         self.log("valid_loss", valid_loss, on_epoch=True, on_step=False, batch_size=1)
+
+        return valid_loss
+    
+
+    def test_step(self, batch, batch_idx):
+        lengths, x, A, pos_enc, y_true = batch
+
+        # forward pass
+        y_pred = self.forward_step(x, A, pos_enc, lengths)
+
+        # compute loss
+        valid_loss = self.valid_loss_func(y_pred, y_true)
+
+        # log loss
+        self.log("test_loss", valid_loss, on_epoch=True, on_step=False, batch_size=1)
 
         return valid_loss
     
