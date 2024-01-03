@@ -20,7 +20,7 @@
     "train_params": {
         "lr": 1e-4,
         "weight_decay": 0.0,
-        "max_epochs": 100,
+        "max_epochs": 1,
         "valid_interval": 2,
         "seed": 0,
         "batch_size": 64,

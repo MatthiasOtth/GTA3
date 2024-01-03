@@ -8,6 +8,8 @@ import argparse
 from zinc.zinc_gta3 import GTA3_ZINC, GTA3_ZINC_Dataset
 from zinc.zinc_gnn import GNN_ZINC, GNN_ZINC_DataLoader
 
+from util.lightning_util import StopOnLrCallback
+
 def main():
     # arguments
     parser = argparse.ArgumentParser(description='Main program to train and evaluate models based on the ZINC dataset.')
@@ -68,7 +70,12 @@ def main():
         logger.log_hyperparams(config)
     else:
         logger = None
-    trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, check_val_every_n_epoch=config['train_params']['valid_interval'])
+    trainer = L.Trainer(
+        max_epochs=config['train_params']['max_epochs'], 
+        logger=logger, 
+        check_val_every_n_epoch=config['train_params']['valid_interval'],
+        callbacks=[StopOnLrCallback(lr_threshold=1e-6, on_val=True)]
+    )
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
     # evaluate the model

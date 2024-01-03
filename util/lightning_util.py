@@ -1,0 +1,29 @@
+import torch
+import pytorch_lightning as L
+from pytorch_lightning.callbacks import Callback
+
+
+class StopOnLrCallback(Callback):
+    """ Stop training when lr reaches a threshold.
+    by default checks after validation. can also check after training.
+    """
+    def __init__(self, lr_threshold=1e-6, on_train=None, on_val=None):
+        super().__init__()
+        self.lr_threshold = lr_threshold
+        if on_train is None and on_val is None:
+            on_val = True  # default to on_val
+        self.on_train = on_train or False
+        self.on_val = on_val or False
+
+    def _check_should_stop(self, trainer: L.Trainer, pl_module):
+        lr = trainer.optimizers[0].param_groups[0]['lr']
+        if lr <= self.lr_threshold:
+            trainer.should_stop = True
+
+    def on_train_end(self, trainer, pl_module):
+        if self.on_train:
+            self._check_should_stop(trainer, pl_module)
+    
+    def on_validation_end(self, trainer, pl_module):
+        if self.on_val:
+            self._check_should_stop(trainer, pl_module)
