@@ -22,17 +22,15 @@ echo "SLURM_JOB_ID:    ${SLURM_JOB_ID}"
 # ensure logs dirs exit
 mkdir -p $HOME/GTA3/logs/euler
 
-# Binary or script to execute
-# load module
-# use the correct python
-# Activate conda
-source $HOME/miniconda3/bin/activate gta3
-
-echo "python version: $(which python3)"
-
-# run the job
+# run
 cd $HOME/GTA3
+
+source .venv/bin/activate
+echo "python: $(which python3)"
+echo "python version: $(python3 --version)"
+
 srun python3 zinc_main.py config/zinc/gta3_500k.json
+
 cd --
 
 # We could copy more results from here to output or any other permanent directory
