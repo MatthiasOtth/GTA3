@@ -8,6 +8,8 @@ from gta3.model import GTA3BaseModel
 from gta3.dataloader import GTA3BaseDataset
 from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
+from common.mlp_readout import MLPReadout
+
 
 class GTA3_ZINC_Dataset(GTA3BaseDataset):
 
@@ -66,16 +68,7 @@ class GTA3_ZINC(GTA3BaseModel):
         super().__init__(model_params, train_params)
 
         # final mlp to map the out dimension to a single value
-        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, 1))
-        # self.out_mlp = nn.Sequential(
-        #     nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2),
-        #     nn.ReLU(), 
-        #     # nn.Dropout(), 
-        #     nn.Linear(model_params['out_dim'] * 2, model_params['out_dim'] // 2),
-        #     nn.ReLU(), 
-        #     # nn.Dropout(), 
-        #     nn.Linear(model_params['out_dim'] // 2, 1),
-        # )
+        self.out_mlp = MLPReadout(model_params['out_dim'], 1)
         
         # loss functions
         if model_params['alpha'] == 'fixed':

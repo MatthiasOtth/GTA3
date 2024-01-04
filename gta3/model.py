@@ -23,7 +23,7 @@ def phi_alpha_pow_dist(a, A, alpha):
 def phi_alpha_pow_dist_exp(a, A, alpha):
     """ a * (e^alpha)^A where A is (transposed) shortest path matrix"""
     w = a * torch.exp(A * alpha)
-    w[A == 0] = 0.0  # set no path to zero
+    w[:, A == 0] = 0.0  # set no path to zero
     w = F.normalize(w, p=1, dim=-1)
     return w
 
@@ -163,6 +163,8 @@ class GTA3Layer(nn.Module):
             self.phi = phi_inverse_hops
         elif phi == 'alpha_pow_dist':
             self.phi = phi_alpha_pow_dist
+        elif phi == 'alpha_pow_dist_exp':
+            self.phi = phi_alpha_pow_dist_exp
         else:
             print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
             exit()

@@ -5,6 +5,7 @@ from dgl.data import ZINCDataset
 from dgl import add_self_loop
 
 from gnn.model import GNNBaseModel
+from common.mlp_readout import MLPReadout
 
 
 class GNN_ZINC_DataLoader(GraphDataLoader):
@@ -38,12 +39,7 @@ class GNN_ZINC(GNNBaseModel):
         super().__init__(gnn_type, model_params, train_params)
 
         # final readout mlp
-        self.out_mlp = nn.Sequential(
-            nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), 
-            nn.ReLU(), 
-            nn.Dropout(), 
-            nn.Linear(model_params['out_dim'] * 2, 1)
-        )
+        self.out_mlp = MLPReadout(model_params['out_dim'], 1)
 
         # loss function
         self.loss_func = nn.L1Loss()

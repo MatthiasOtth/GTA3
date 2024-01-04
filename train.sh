@@ -29,7 +29,7 @@ mkdir -p $HOME/GTA3/logs/euler
 source $HOME/miniconda3/bin/activate gta3
 
 # run the job
-python $HOME/GTA3/zinc_main.py config/zinc/gta3_default.json
+python $HOME/GTA3/zinc_main.py config/zinc/gta3_500k.json
 
 # We could copy more results from here to output or any other permanent directory
 

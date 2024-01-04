@@ -8,6 +8,7 @@ from dgl.data.utils import save_info, load_info
 
 from gta3.model import GTA3BaseModel
 from gta3.dataloader import GTA3BaseDataset, transform_to_graph_list
+from common.mlp_readout import MLPReadout
 
 
 class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
@@ -73,7 +74,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
         super().__init__(model_params, train_params)
 
         # final mlp to map the out dimension to a single value
-        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
+        self.out_mlp = MLPReadout(model_params['out_dim'], model_params['num_out_types'])
         
         # loss functions
         self.criterion = nn.CrossEntropyLoss()

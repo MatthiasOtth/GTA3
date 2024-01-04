@@ -18,6 +18,8 @@ def laplacian_positional_encoding(g, pos_enc_dim):
         Implementation copied from 'A Generalization of Transformer Networks to Graphs' by Vijay Prakash Dwivedi and Xavier Bresson.
         Link: https://github.com/graphdeeplearning/graphtransformer/blob/main/data/molecules.py (2023-12-29)
 
+        
+        TODO: there is a pytorch_geometric implementation of this, right? pyg.utils.<something>
     """
 
     # Laplacian
