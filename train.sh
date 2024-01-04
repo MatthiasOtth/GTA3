@@ -7,8 +7,8 @@
 #SBATCH --time=1:00:00
 #SBATCH --mem-per-cpu=8G
 #SBATCH --tmp=8G
-#SBATCH --output=/cluster/home/%u/GTA3/logs/euler/%j.out
-#SBATCH --error=/cluster/home/%u/GTA3/logs/euler/%j.err
+#SBATCH --output=/home/%u/GTA3/logs/euler/%j.out
+#SBATCH --error=/home/%u/GTA3/logs/euler/%j.err
 
 # Exit on errors
 set -o errexit
@@ -27,6 +27,8 @@ mkdir -p $HOME/GTA3/logs/euler
 # use the correct python
 # Activate conda
 source $HOME/miniconda3/bin/activate gta3
+
+echo "python version: $(which python)"
 
 # run the job
 python $HOME/GTA3/zinc_main.py config/zinc/gta3_500k.json
