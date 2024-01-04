@@ -21,8 +21,15 @@ def phi_alpha_pow_dist(a, A, alpha):
     return new_a
 
 def phi_alpha_pow_dist_exp(a, A, alpha):
-    """ a * (e^alpha)^A where A is (transposed) shortest path matrix"""
+    """ a * (e^alpha)^A where A is (transposed) shortest path matrix """
     new_a = a * torch.exp(A * alpha)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
+def phi_alpha_pow_dist_sigmoid(a, A, alpha):
+    """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
+    new_a = a * torch.pow(torch.sigmoid(alpha), A)
     new_a = torch.where(A==0, torch.zeros_like(a), new_a)
     new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
@@ -165,6 +172,8 @@ class GTA3Layer(nn.Module):
             self.phi = phi_alpha_pow_dist
         elif phi == 'alpha_pow_dist_exp':
             self.phi = phi_alpha_pow_dist_exp
+        elif phi == 'alpha_pow_dist_sigmoid':
+            self.phi = phi_alpha_pow_dist_sigmoid
         else:
             print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
             exit()
