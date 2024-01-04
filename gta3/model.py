@@ -22,10 +22,10 @@ def phi_alpha_pow_dist(a, A, alpha):
 
 def phi_alpha_pow_dist_exp(a, A, alpha):
     """ a * (e^alpha)^A where A is (transposed) shortest path matrix"""
-    w = a * torch.exp(A * alpha)
-    w[:, A == 0] = 0.0  # set no path to zero
-    w = F.normalize(w, p=1, dim=-1)
-    return w
+    new_a = a * torch.exp(A * alpha)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
 
 def phi_inverse_hops(a, A, alpha):
     # Assumes that A is shortest path matrix
