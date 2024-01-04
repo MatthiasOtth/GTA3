@@ -20,10 +20,9 @@
     "train_params": {
         "lr": 1e-3,
         "weight_decay": 0.0,
-        "max_epochs": 1000,
         "lr_threshold": 1e-5,
         "seed": 0,
-        "batch_size": 64,
+        "batch_size": 128,
         "lr_reduce_factor": 0.5,
         "lr_schedule_patience": 5
     },
