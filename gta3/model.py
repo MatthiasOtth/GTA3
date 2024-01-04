@@ -20,6 +20,13 @@ def phi_alpha_pow_dist(a, A, alpha):
     new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
+def phi_alpha_pow_dist_exp(a, A, alpha):
+    """ a * (e^alpha)^A where A is (transposed) shortest path matrix"""
+    w = a * torch.exp(A * alpha)
+    w[A == 0] = 0.0  # set no path to zero
+    w = F.normalize(w, p=1, dim=-1)
+    return w
+
 def phi_inverse_hops(a, A, alpha):
     # Assumes that A is shortest path matrix
     if alpha == 0:
@@ -323,5 +330,5 @@ class GTA3BaseModel(L.LightningModule):
         )
         return (
             [optimizer],
-            [{'scheduler': scheduler, 'interval': 'epoch', 'monitor': self.score_name}]
+            [{'scheduler': scheduler, 'interval': 'epoch', 'monitor': self.score_name, 'strict': False}]
         )

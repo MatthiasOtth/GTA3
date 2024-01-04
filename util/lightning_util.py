@@ -1,6 +1,6 @@
 import torch
-import pytorch_lightning as L
-from pytorch_lightning.callbacks import Callback
+import lightning as L
+from lightning.pytorch.callbacks import Callback
 
 
 class StopOnLrCallback(Callback):
@@ -18,6 +18,7 @@ class StopOnLrCallback(Callback):
     def _check_should_stop(self, trainer: L.Trainer, pl_module):
         lr = trainer.optimizers[0].param_groups[0]['lr']
         if lr <= self.lr_threshold:
+            print(f"Stopping training because lr {lr} <= {self.lr_threshold}")
             trainer.should_stop = True
 
     def on_train_end(self, trainer, pl_module):

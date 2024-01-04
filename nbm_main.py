@@ -83,13 +83,13 @@ def main():
     trainer = L.Trainer(
         max_epochs=config['train_params']['max_epochs'], 
         logger=logger, 
-        check_val_every_n_epoch=config['train_params']['valid_interval'],
-        callbacks=[StopOnLrCallback(lr_threshold=1e-6, on_val=True)],
+        check_val_every_n_epoch=1,  # needed for lr scheduler
+        callbacks=[StopOnLrCallback(lr_threshold=config['train_params']['lr_threshold'], on_val=True)],
     )
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
     # evaluate the model
-    trainer.test(model=model, test_dataloaders=test_loader, verbose=True)
+    trainer.test(model=model, dataloaders=test_loader, verbose=True)
 
 
 if __name__ == '__main__':

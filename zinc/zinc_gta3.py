@@ -57,13 +57,13 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
 class GTA3_ZINC(GTA3BaseModel):
     
     def __init__(self, model_params, train_params):
-        
-        # initialize the GTA3 base model
-        super().__init__(model_params, train_params)
 
         # set the score direction and name for lr scheduler
         self.score_direction = "min"
         self.score_name = "valid_loss"
+        
+        # initialize the GTA3 base model
+        super().__init__(model_params, train_params)
 
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, 1))
@@ -158,7 +158,7 @@ class GTA3_ZINC(GTA3BaseModel):
         valid_loss = self.valid_loss_func(y_pred, y_true)
 
         # log loss
-        self.log("valid_loss", valid_loss, on_epoch=True, on_step=False, batch_size=1)
+        self.log(self.score_name, valid_loss, on_epoch=True, on_step=False, batch_size=1, prog_bar=True)
 
         return valid_loss
     

@@ -96,14 +96,13 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
 
 class GTA3_NBM(GTA3BaseModel):
     
-    def __init__(self, model_params, train_params):
-        
-        # initialize the GTA3 base model
-        super().__init__(model_params, train_params)
+    def __init__(self, model_params, train_params):    
 
         # setup score name and direction for lr scheduler
         self.score_name = "valid_accuracy"
         self.score_direction = "max"
+        # initialize the GTA3 base model
+        super().__init__(model_params, train_params)
 
         # need two embeddings: one for the keys and one for the values
         # -> one is already created in the base model

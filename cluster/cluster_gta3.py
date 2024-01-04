@@ -64,13 +64,13 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
 class GTA3_CLUSTER(GTA3BaseModel):
     
     def __init__(self, model_params, train_params):
-        
-        # initialize the GTA3 base model
-        super().__init__(model_params, train_params)
 
         # init score name and direction for lr scheduler
         self.score_name = 'valid_accuracy'
         self.score_direction = 'max'
+        
+        # initialize the GTA3 base model
+        super().__init__(model_params, train_params)
 
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
@@ -150,7 +150,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
         accuracy = (preds == labels).sum().float() / total
 
         # log accuracy
-        self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+        self.log(self.score_name, accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return accuracy
 
