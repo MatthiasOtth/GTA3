@@ -362,7 +362,18 @@ class GTA3BaseModel(L.LightningModule):
             raise NotImplementedError("GTA3BaseModel: Define score_direction attribute! (min|max)")
         if not hasattr(self, "score_name") or self.score_name is None:
             raise NotImplementedError("GTA3BaseModel: Define score_name attribute! (e.g. 'val_loss')")
-        optimizer = optim.Adam(self.parameters(), lr=self.train_params['lr'])
+        
+        default_params = [p for p in self.parameters() if p is not self.alpha]
+        param_groups = [
+            {'params': default_params},
+            {'params': [self.alpha], 'lr': self.train_params['lr_alpha']}
+        ]
+        optimizer = optim.Adam(
+            param_groups,
+            lr=self.train_params['lr'],
+            weight_decay=self.train_params['weight_decay']
+        )
+        print(f"Optimizer: {optimizer}")
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode=self.score_direction,
@@ -370,6 +381,7 @@ class GTA3BaseModel(L.LightningModule):
             patience=self.train_params['lr_schedule_patience'],
             verbose=True
         )
+        print(f"LR-Scheduler: {scheduler}")
         return (
             [optimizer],
             [{'scheduler': scheduler, 'interval': 'epoch', 'monitor': self.score_name, 'strict': False}]
