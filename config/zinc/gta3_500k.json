@@ -4,9 +4,9 @@
     "model_params": {
         "hidden_dim": 60,
         "out_dim": 72,
-        "phi": "alpha_pow_dist",
+        "phi": "inverse_hops",
         "alpha": "per_layer",
-        "alpha_init": 0.5,
+        "alpha_init": 0.3,
         "alpha_weight": 0,
         "num_heads": 4,
         "num_layers": 16,
@@ -28,6 +28,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500k_alpha_pow_dist_init0.5_debug_euler_srun"
+        "name": "zinc_gta3_500k_inverse_hops_init.3"
     }
 }
