@@ -29,7 +29,7 @@ source .venv/bin/activate
 echo "python: $(which python3)"
 echo "python version: $(python3 --version)"
 
-srun python3 zinc_main.py config/zinc/gta3_default.json
+srun python3 zinc_main.py config/zinc/gta3_500k.json
 
 cd --
 
