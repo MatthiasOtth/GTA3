@@ -34,7 +34,7 @@ def main():
     # set the seed if we are using one
     if config['train_params']['seed'] is not None:
         print(f"Setting manual seed to {config['train_params']['seed']}.")
-        torch.manual_seed(config['train_params']['seed'])
+        L.seed_everything(config['train_params']['seed'])
     torch.set_float32_matmul_precision('medium')
 
     # load the training data
