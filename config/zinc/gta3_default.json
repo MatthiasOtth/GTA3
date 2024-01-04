@@ -28,6 +28,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_2layer_test"
+        "name": "zinc_gta3_2layer_test_euler"
     }
 }
