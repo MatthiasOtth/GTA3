@@ -28,6 +28,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500k_alpha_pow_dist_init0.5"
+        "name": "zinc_gta3_500k_alpha_pow_dist_init0.5_debug_euler"
     }
 }
