@@ -276,38 +276,44 @@ class GTA3BaseModel(L.LightningModule):
         self.train_params = train_params
 
         # initialize the alpha value
-        if model_params['alpha'] == 'fixed':
-            self.per_layer_alpha = False
-            self.register_buffer("alpha", torch.tensor([model_params['alpha_init']], dtype=torch.float))
-        elif model_params['alpha'] == 'per_model':
-            self.per_layer_alpha = False
-            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
-        elif model_params['alpha'] == 'per_layer':
-            self.per_layer_alpha = True
-            if type(model_params['alpha_init']) == list:
-                assert len(model_params['alpha_init']) == model_params['num_layers'], \
-                    f"Number of layers ({model_params['num_layers']}) does not match number of initial alpha values given ({len(model_params['alpha_init'])})!"
-                self.alpha = torch.nn.Parameter(torch.tensor(model_params['alpha_init'], dtype=torch.float))
-            else:
-                self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in range(model_params['num_layers'])], dtype=torch.float))
-        elif model_params['alpha'] == 'per_head': # TODO: test this...
-            self.per_head_alpha = True
-            if type(model_params['alpha_init']) == list:
-                assert len(model_params['alpha_init']) == model_params['num_layers'], \
-                    f"Number of layers ({model_params['num_layers']}) does not match number of initial alpha values given ({len(model_params['alpha_init'])})!"
-                self.alpha = torch.nn.Parameter(
-                    torch.tensor(model_params['alpha_init'], dtype=torch.float).unsqueeze(1).repeat(1, model_params['num_heads'])
-                )
-            else:
-                self.alpha = torch.nn.Parameter(
-                    torch.full(
-                        (model_params['num_layers'], model_params['num_heads']),
-                        model_params['alpha_init'], dtype=torch.float
-                    )
-                )
-            
+        n_layers = model_params['num_layers']
+        if isinstance(model_params['alpha_init'], str):
+            if model_params['alpha_init'] == 'linear_inc_dec':
+                lb, ub = model_params['alpha_init_kwargs']['lb'], model_params['alpha_init_kwargs']['ub']
+                if n_layers % 2 == 0:
+                    a = torch.linspace(lb, ub, n_layers//2)
+                    alpha = torch.cat([a, a.flip(0)])
+                else:
+                    a = torch.linspace(lb, ub, n_layers//2+1)
+                    alpha = torch.cat([a[:-1], a.flip(0)])
+            elif model_params['alpha_init'] == 'linear_inc':
+                lb, ub = model_params['alpha_init_kwargs']['lb'], model_params['alpha_init_kwargs']['ub']
+                alpha = torch.linspace(lb, ub, n_layers)
+            elif model_params['alpha_init'] == 'linear_dec':
+                lb, ub = model_params['alpha_init_kwargs']['lb'], model_params['alpha_init_kwargs']['ub']
+                alpha = torch.linspace(ub, lb, n_layers)
         else:
-            raise ValueError("Invalid alpha model parameter!", model_params['alpha'])
+            try:
+                alpha = torch.tensor(model_params['alpha_init'], dtype=torch.float)
+            except:
+                raise ValueError("Invalid alpha_init parameter!", model_params['alpha_init'])
+
+        if model_params['alpha_init'] == 'per_model' and alpha.numel() != 1:
+            raise ValueError(f"Invalid alpha_init parameter (because of `per_model`)! Expected 1 value, got {alpha.numel()}!")
+        elif model_params['alpha_init'] == 'per_layer':
+            try:
+                alpha = alpha.expand((n_layers,))
+            except:
+                raise ValueError(f"Invalid alpha_init parameter (because of `per_layer`)! cannot expand {alpha.shape} to ({n_layers},)!")
+        elif model_params['alpha_init'] == 'per_head':
+            raise NotImplementedError("per head alpha not implemented")
+        
+        if model_params['alpha_init'] == 'fixed':
+            self.register_buffer("alpha", alpha)
+        else:
+            self.alpha = torch.nn.Parameter(alpha)
+        
+        self.per_layer_alpha = self.alpha.dim() >= 1
 
         # creates an embedding depending on the node type
         self.embedding = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
