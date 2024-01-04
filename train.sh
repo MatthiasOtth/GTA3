@@ -2,7 +2,7 @@
 
 #SBATCH -A deep_learning
 #SBATCH --job=gta3
-
+#SBATCH --gpus=1  # max
 #SBATCH --cpus-per-task=2  # max=2
 #SBATCH --time=1:00:00
 #SBATCH --mem-per-cpu=8G
