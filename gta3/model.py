@@ -175,8 +175,7 @@ class GTA3Layer(nn.Module):
         elif phi == 'alpha_pow_dist_sigmoid':
             self.phi = phi_alpha_pow_dist_sigmoid
         else:
-            print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
-            exit()
+            raise NotImplementedError(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
 
         self.O = nn.Linear(out_dim, out_dim)
         self.aa_attention = AdjacencyAwareMultiHeadAttention(in_dim=in_dim, out_dim=out_dim//num_heads, phi=self.phi, num_heads=num_heads, bias=attention_bias)
@@ -266,10 +265,10 @@ class GTA3BaseModel(L.LightningModule):
         if model_params['alpha'] == 'fixed':
             self.per_layer_alpha = False
             self.alpha = torch.tensor([model_params['alpha_init']], dtype=torch.float)
-        elif model_params['alpha'] == 'per_model': # TODO: test this...
+        elif model_params['alpha'] == 'per_model':
             self.per_layer_alpha = False
             self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
-        elif model_params['alpha'] == 'per_layer': # TODO: test this...
+        elif model_params['alpha'] == 'per_layer':
             self.per_layer_alpha = True
             if type(model_params['alpha_init']) == list:
                 assert len(model_params['alpha_init']) == model_params['num_layers'], \
@@ -278,9 +277,21 @@ class GTA3BaseModel(L.LightningModule):
             else:
                 self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in range(model_params['num_layers'])], dtype=torch.float))
         elif model_params['alpha'] == 'per_head': # TODO: test this...
-            self.per_layer_alpha = True
-            # TODO: implement
-            raise NotImplementedError("alpha per head is not yet implemented...")
+            self.per_head_alpha = True
+            if type(model_params['alpha_init']) == list:
+                assert len(model_params['alpha_init']) == model_params['num_layers'], \
+                    f"Number of layers ({model_params['num_layers']}) does not match number of initial alpha values given ({len(model_params['alpha_init'])})!"
+                self.alpha = torch.nn.Parameter(
+                    torch.tensor(model_params['alpha_init'], dtype=torch.float).unsqueeze(1).repeat(1, model_params['num_heads'])
+                )
+            else:
+                self.alpha = torch.nn.Parameter(
+                    torch.full(
+                        (model_params['num_layers'], model_params['num_heads']),
+                        model_params['alpha_init'], dtype=torch.float
+                    )
+                )
+            
         else:
             raise ValueError("Invalid alpha model parameter!", model_params['alpha'])
 

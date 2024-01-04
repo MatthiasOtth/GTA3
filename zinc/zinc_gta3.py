@@ -89,8 +89,6 @@ class GTA3_ZINC(GTA3BaseModel):
             - lengths: [B]
 
         """
-        self.alpha = self.alpha.to(device=self.device)
-
         # create embeddings
         h = self.embedding(x)
 
@@ -101,7 +99,7 @@ class GTA3_ZINC(GTA3BaseModel):
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
-            if self.per_layer_alpha: 
+            if self.per_layer_alpha or self.per_head_alpha: 
                 h, log_dict = layer.forward(h, A, lengths, self.alpha[idx])
             else:
                 h, log_dict = layer.forward(h, A, lengths, self.alpha)
