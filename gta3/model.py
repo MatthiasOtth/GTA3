@@ -48,6 +48,18 @@ def phi_inverse_hops(a, A, alpha):
 
     return new_a
 
+def phi_poisson_exp(a, A, alpha):
+    """ a * poisson(A; alpha) """
+    # log prob from torch.distributions.poisson: value.xlogy(rate) - rate - (value + 1).lgamma()
+    rate_log = alpha  # we learn exp(rate) bc it is always positive
+    rate = torch.exp(rate_log)
+    value = A
+    log_prob = value * rate_log - rate - (value + 1).lgamma()
+    new_a = a * torch.exp(log_prob)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
 
 class AdjacencyAwareMultiHeadAttention(nn.Module):
 
@@ -174,6 +186,8 @@ class GTA3Layer(nn.Module):
             self.phi = phi_alpha_pow_dist_exp
         elif phi == 'alpha_pow_dist_sigmoid':
             self.phi = phi_alpha_pow_dist_sigmoid
+        elif phi == 'phi_poisson_exp':
+            self.phi = phi_poisson_exp
         else:
             raise NotImplementedError(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
 
