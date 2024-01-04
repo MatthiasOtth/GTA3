@@ -28,11 +28,11 @@ mkdir -p $HOME/GTA3/logs/euler
 # Activate conda
 source $HOME/miniconda3/bin/activate gta3
 
-echo "python version: $(which python)"
+echo "python version: $(which python3)"
 
 # run the job
 cd $HOME/GTA3
-python zinc_main.py config/zinc/gta3_500k.json
+srun python3 zinc_main.py config/zinc/gta3_500k.json
 cd --
 
 # We could copy more results from here to output or any other permanent directory
