@@ -31,7 +31,9 @@ source $HOME/miniconda3/bin/activate gta3
 echo "python version: $(which python)"
 
 # run the job
-python $HOME/GTA3/zinc_main.py config/zinc/gta3_500k.json
+cd $HOME/GTA3
+python zinc_main.py config/zinc/gta3_500k.json
+cd --
 
 # We could copy more results from here to output or any other permanent directory
 
