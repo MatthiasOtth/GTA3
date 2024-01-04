@@ -278,7 +278,7 @@ class GTA3BaseModel(L.LightningModule):
         # initialize the alpha value
         if model_params['alpha'] == 'fixed':
             self.per_layer_alpha = False
-            self.alpha = torch.tensor([model_params['alpha_init']], dtype=torch.float)
+            self.register_buffer("alpha", torch.tensor([model_params['alpha_init']], dtype=torch.float))
         elif model_params['alpha'] == 'per_model':
             self.per_layer_alpha = False
             self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
