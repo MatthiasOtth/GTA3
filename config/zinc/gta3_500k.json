@@ -33,6 +33,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500k_lr1e-4_local_attn"
+        "name": "zinc_gta3_500kmatthias_lr1e-4_local_attn"
     }
 }
