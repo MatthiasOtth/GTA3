@@ -30,7 +30,18 @@ class GTA3BaseDataset(Dataset):
         self.use_adj_matrix = False
         if phi_func == 'test':
             self.use_adj_matrix = True
-        elif phi_func in ['inverse_hops', 'alpha_pow_dist', 'alpha_pow_dist_exp', 'alpha_pow_dist_sigmoid', 'phi_poisson_exp']:
+        elif (
+            phi_func in 
+                [
+                    'inverse_hops',
+                    'inverse_hops_exp',
+                    'alpha_pow_dist',
+                    'alpha_pow_dist_exp',
+                    'alpha_pow_dist_sigmoid',
+                    'alpha_pow_dist_sigmoid_softmax',
+                    'phi_poisson_exp',
+                ]
+        ):
             self.use_shortest_dist = True
         elif phi_func != 'none':
             raise ValueError(f"GTA3BaseDataset Error: Invalid value for phi_func: '{phi_func}'!")

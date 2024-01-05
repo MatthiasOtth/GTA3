@@ -34,6 +34,13 @@ def phi_alpha_pow_dist_sigmoid(a, A, alpha):
     new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
+def phi_alpha_pow_dist_sigmoid_softmax(a, A, alpha):
+    """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
+    new_a = a * torch.pow(torch.sigmoid(alpha), A)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.softmax(new_a, dim=-1)
+    return new_a
+
 def phi_inverse_hops(a, A, alpha):
     # Assumes that A is shortest path matrix
     if alpha == 0:
@@ -45,7 +52,13 @@ def phi_inverse_hops(a, A, alpha):
         new_a = torch.where(A==0, torch.zeros_like(a), new_a)
     new_a = F.normalize(new_a, p=1, dim=-1)
     # new_a = F.softmax(new_a, dim=-1)
+    return new_a
 
+def phi_inverse_hops_exp(a, A, alpha):
+    """ a * A^{-1/exp(alpha)} """
+    new_a = a * torch.pow(A, -1/torch.exp(alpha))
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
 def phi_poisson_exp(a, A, alpha):
@@ -73,7 +86,6 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
           phi:       the weighting function to be used
           num_heads: the number of attention heads to be used (default: 8)
           bias:      whether the attention matrices (Q, K, V) use a bias or not (default: True)
-
         """
         super().__init__()
 
@@ -114,7 +126,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         V_h = einops.rearrange(V_h, 'b n (k d) -> b k n d', d=self.out_dim)
 
         # compute the dot products
-        attention = torch.matmul(Q_h, K_h.transpose(-1,-2))
+        attention = torch.matmul(Q_h, K_h.transpose(-1,-2))  # [batch, heads, nodes, nodes]
 
         #TODO: Optimize generation of mask
         mask = torch.full((attention.shape[0], attention.shape[2]), False, device=attention.device)
@@ -150,7 +162,17 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
 
 class GTA3Layer(nn.Module):
 
-    def __init__(self, in_dim, out_dim, phi, num_heads=8, residual=True, batch_norm=False, layer_norm=True, attention_bias=True):
+    def __init__(
+        self,
+        in_dim,
+        out_dim,
+        phi,
+        num_heads=8,
+        residual=True,
+        batch_norm=False,
+        layer_norm=True,
+        attention_bias=True,
+    ):
         """
         Graph Transformer with Adjacency Aware Attention (GTA3) layer.
 
@@ -163,7 +185,6 @@ class GTA3Layer(nn.Module):
           batch_norm:     whether to use batch normalization (default: False)
           layer_norm:     whether to use layer normalization (default: True)
           attention_bias: whether the attention matrices (Q, K, V) use a bias or not (default: True)
-
         """
         super().__init__()
         assert out_dim%num_heads == 0, f"GTA3 Error: out_dim ({out_dim}) must be divisible by num_heads ({num_heads})!"
@@ -180,19 +201,29 @@ class GTA3Layer(nn.Module):
             self.phi = phi_simple_adj_weighting
         elif phi == 'inverse_hops':
             self.phi = phi_inverse_hops
+        elif phi == 'inverse_hops_exp':
+            self.phi = phi_inverse_hops_exp
         elif phi == 'alpha_pow_dist':
             self.phi = phi_alpha_pow_dist
         elif phi == 'alpha_pow_dist_exp':
             self.phi = phi_alpha_pow_dist_exp
         elif phi == 'alpha_pow_dist_sigmoid':
             self.phi = phi_alpha_pow_dist_sigmoid
+        elif phi == 'alpha_pow_dist_sigmoid_softmax':
+            self.phi = phi_alpha_pow_dist_sigmoid_softmax
         elif phi == 'phi_poisson_exp':
             self.phi = phi_poisson_exp
         else:
             raise NotImplementedError(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
 
         self.O = nn.Linear(out_dim, out_dim)
-        self.aa_attention = AdjacencyAwareMultiHeadAttention(in_dim=in_dim, out_dim=out_dim//num_heads, phi=self.phi, num_heads=num_heads, bias=attention_bias)
+        self.aa_attention = AdjacencyAwareMultiHeadAttention(
+            in_dim=in_dim,
+            out_dim=out_dim//num_heads,
+            phi=self.phi,
+            num_heads=num_heads,
+            bias=attention_bias,
+        )
         self.FFN_layer_1 = nn.Linear(out_dim, out_dim * 2)
         self.FFN_layer_2 = nn.Linear(out_dim * 2, out_dim)
 
