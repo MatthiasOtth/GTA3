@@ -51,6 +51,15 @@ def phi_alpha_pow_dist_sigmoid_softmax(a, A, alpha):
     new_a = F.softmax(new_a, dim=-1)
     return new_a
 
+def phi_gaussian_std1(a, A, alpha):
+    """ a * gaussian(A; exp(alpha), 1) """
+    mu = 1 + torch.exp(alpha)
+    p = torch.exp(-0.5 * torch.pow(A - mu, 2))
+    new_a = a * p
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
 def phi_inverse_hops(a, A, alpha):
     """ a * A^{-1/alpha} """
     alpha = torch.clamp(alpha, min=1e-8)

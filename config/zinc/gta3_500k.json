@@ -23,7 +23,7 @@
     },
     "train_params": {
         "lr": 1e-4,
-        "lr_alpha": 1e-1,
+        "lr_alpha": 1.0,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
@@ -33,6 +33,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500kmatthias_lr1e-4_apdsig_init0_patience20"
+        "name": "zinc_gta3_500kmatthias_lr1e-4_apdsig_init0_patience20_lralpha1"
     }
 }
