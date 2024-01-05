@@ -229,6 +229,8 @@ class GTA3Layer(nn.Module):
             self.phi = phi_alpha_pow_dist_sigmoid_softmax
         elif phi == 'phi_poisson_exp':
             self.phi = phi_poisson_exp
+        elif phi == 'gaussian_std1':
+            self.phi = phi_gaussian_std1
         else:
             raise NotImplementedError(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
 

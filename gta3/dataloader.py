@@ -40,6 +40,7 @@ class GTA3BaseDataset(Dataset):
                     'alpha_pow_dist_sigmoid',
                     'alpha_pow_dist_sigmoid_softmax',
                     'phi_poisson_exp',
+                    'gaussian_std1'
                 ]
         ):
             self.use_shortest_dist = True
