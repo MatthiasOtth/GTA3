@@ -13,6 +13,12 @@ def phi_simple_adj_weighting(a, A, alpha):
     new_a = a * (1-alpha) + A * alpha
     return new_a
 
+def phi_local(a, A, alpha):
+    """ assumes A is adjacency matrix """
+    new_a = torch.where(A==1, a, torch.zeros_like(a))
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
 def phi_alpha_pow_dist(a, A, alpha):
     alpha = torch.clamp(alpha, min=0) #, max=1)
     new_a = torch.pow(alpha + 1e-10, A) * a
@@ -27,31 +33,30 @@ def phi_alpha_pow_dist_exp(a, A, alpha):
     new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
+def alpha_pow_dist_sigmoid(a, A, alpha):
+    """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
+    new_a = a * torch.sigmoid(A * alpha)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    return new_a
+
 def phi_alpha_pow_dist_sigmoid(a, A, alpha):
     """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
-    new_a = a * torch.pow(torch.sigmoid(alpha), A)
-    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = alpha_pow_dist_sigmoid(a, A, alpha)
     new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
 def phi_alpha_pow_dist_sigmoid_softmax(a, A, alpha):
     """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
-    new_a = a * torch.pow(torch.sigmoid(alpha), A)
-    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = alpha_pow_dist_sigmoid(a, A, alpha)
     new_a = F.softmax(new_a, dim=-1)
     return new_a
 
 def phi_inverse_hops(a, A, alpha):
-    # Assumes that A is shortest path matrix
-    if alpha == 0:
-        new_a = torch.where(A==1, a, torch.zeros_like(a))
-    else:
-        x = torch.clamp(1/torch.abs(alpha), max=10)
-        #TODO: Rewrite so we don't need epsilon
-        new_a = 1./(torch.pow(A, x) * a + 1e-5)
-        new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    """ a * A^{-1/alpha} """
+    alpha = torch.clamp(alpha, min=1e-8)
+    new_a = a * torch.pow(A, -1/alpha)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
     new_a = F.normalize(new_a, p=1, dim=-1)
-    # new_a = F.softmax(new_a, dim=-1)
     return new_a
 
 def phi_inverse_hops_exp(a, A, alpha):
@@ -197,6 +202,8 @@ class GTA3Layer(nn.Module):
 
         if phi == 'none':
             self.phi = phi_no_weighting
+        elif phi == 'local':
+            self.phi = phi_local
         elif phi == 'test':
             self.phi = phi_simple_adj_weighting
         elif phi == 'inverse_hops':
@@ -402,8 +409,10 @@ class GTA3BaseModel(L.LightningModule):
         default_params = [p for p in self.parameters() if p is not self.alpha]
         param_groups = [
             {'params': default_params},
-            {'params': [self.alpha], 'lr': self.train_params['lr_alpha']}
         ]
+        if isinstance(self.alpha, torch.nn.Parameter):
+            param_groups.append({'params': self.alpha, 'lr': self.train_params['alpha_lr']})
+
         optimizer = optim.Adam(
             param_groups,
             lr=self.train_params['lr'],

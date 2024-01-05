@@ -4,8 +4,8 @@
     "model_params": {
         "hidden_dim": 60,
         "out_dim": 72,
-        "phi": "alpha_pow_dist_sigmoid_softmax",
-        "alpha": "per_layer",
+        "phi": "local",
+        "alpha": "fixed",
         "alpha_init": 0.0,
         "alpha_init_kwargs": {
             "lb": -10.0,
@@ -22,7 +22,7 @@
         "attention_bias": true
     },
     "train_params": {
-        "lr": 1e-4,
+        "lr": 1e-3,
         "lr_alpha": 1e-1,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
@@ -33,6 +33,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500k_lr1e-4_alpha_pow_dist_sigmoid_softmax_init0_lr_alpha1e-1"
+        "name": "zinc_gta3_500k_lr1e-3_local_attn"
     }
 }

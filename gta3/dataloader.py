@@ -28,7 +28,7 @@ class GTA3BaseDataset(Dataset):
         # > phi function
         self.use_shortest_dist = False
         self.use_adj_matrix = False
-        if phi_func == 'test':
+        if phi_func in ['test', 'local']:
             self.use_adj_matrix = True
         elif (
             phi_func in 
