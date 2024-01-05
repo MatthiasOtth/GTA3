@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import einops
 import lightning as L
 from torch import optim
+from wandb import Histogram
 
 
 def phi_no_weighting(a, A, alpha):
@@ -161,9 +162,9 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         A_t = A.transpose(-1,-2)
         
         log_dict = {}
-        log_dict["attention/attn_hist_pre_transform"] = self._attn_hist(self, attention, A_t)
+        log_dict["attn_hist_pre_transform"] = self._attn_hist(self, attention, A_t)
         attention = self.phi(attention, A_t, alpha)
-        log_dict["attention/attn_hist_post_transform"] = self._attn_hist(self, attention, A_t)
+        log_dict["attn_hist_post_transform"] = self._attn_hist(self, attention, A_t)
 
         attention = attention.moveaxis(0,1)        
         # sum value tensors scaled by the attention weights
@@ -171,17 +172,17 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         return h_heads, log_dict
     
     @staticmethod
-    def _attn_hist(self, attention, A_t, d=5):
+    def _attn_hist(self, attention, A_t, d=10):
         with torch.no_grad():
             bin_edges = torch.arange(0, d+1, dtype=torch.float, device=attention.device)
-            attn = attention.mean(dim=0).mean(dim=0)  # mean over batch and heads
+            attn = attention.mean(dim=0)  # mean over heads
             # sum-up attention weights for each distance
             count = torch.zeros((d,), dtype=torch.float, device=attention.device)
             for i in range(d):
                 if i != d-1:
-                    count[i] = attn[A_t==i].sum()
+                    count[i] = attn[A_t==i].mean(dim=0).sum()  # sum over nodes, mean over batch
                 else:
-                    count[i] = attn[A_t>=i].sum()
+                    count[i] = attn[A_t>=i].mean(dim=0).sum()  # sum over nodes, mean over batch
         return count, bin_edges
 
 
@@ -409,6 +410,9 @@ class GTA3BaseModel(L.LightningModule):
                 attention_bias=model_params['attention_bias'])
         )
 
+        # logging
+        self.log_dicts = dict()
+
 
     def training_step(self, batch, batch_idx):
         raise NotImplementedError("GTA3BaseModel: Define training_step function!")
@@ -453,3 +457,36 @@ class GTA3BaseModel(L.LightningModule):
             [optimizer],
             [{'scheduler': scheduler, 'interval': 'epoch', 'monitor': self.score_name, 'strict': False}]
         )
+    
+    def _log_dict(self, layer_idx, log_dict):
+        self.log_dicts.setdefault(layer_idx, [])
+        self.log_dicts[layer_idx].append(log_dict)
+    
+    def _log_log_dict(self, kind: str):
+        for layer_idx, log_dicts in self.log_dicts.items():
+            # list(dict(str, t)) -> dict(str, list(t))
+            log_dict = dict()
+            for key in log_dicts[0].keys():
+                log_dict[key] = [d[key] for d in log_dicts]
+            for key in log_dict.keys():
+                if "attn_hist" in key:
+                    hist = torch.stack([d[0] for d in log_dict[key]]).mean(dim=0)
+                    bin_edges = log_dict[key][0][1]
+                    self.logger.experiment.log(
+                        {f"{kind}/attention/l{layer_idx}_{key}": Histogram(np_histogram=(hist, bin_edges))},
+                        step=self.global_step
+                    )
+                else:
+                    print(f"unknown key {key} in log_dict")
+    
+    def on_training_epoch_end(self):
+        self._log_log_dict("train")
+        self.log_dicts = dict()
+    
+    def on_validation_epoch_end(self):
+        self._log_log_dict("valid")
+        self.log_dicts = dict()
+    
+    def on_test_epoch_end(self):
+        self._log_log_dict("test")
+        self.log_dicts = dict()

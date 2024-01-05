@@ -8,9 +8,6 @@ from gta3.model import GTA3BaseModel
 from gta3.dataloader import GTA3BaseDataset
 from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
-from wandb import Histogram
-from lightning.pytorch.loggers import WandbLogger
-
 from common.mlp_readout import MLPReadout
 
 
@@ -106,10 +103,7 @@ class GTA3_ZINC(GTA3BaseModel):
                 h, log_dict = layer.forward(h, A, lengths, self.alpha[idx])
             else:
                 h, log_dict = layer.forward(h, A, lengths, self.alpha)
-            for key, val in log_dict.items():
-                if isinstance(val, tuple) and len(val) == 2 and isinstance(self.logger, WandbLogger):
-                    hist = Histogram(np_histogram=val)
-                    self.logger.experiment.log({f"attention/l{idx}_{key}": hist}, step=self.global_step)
+            self._log_dict(idx, log_dict)
                 
         # combine resulting node embeddings
         h = torch.mean(h, dim=-2) # TODO: using mean for now
