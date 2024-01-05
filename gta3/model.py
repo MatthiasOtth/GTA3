@@ -298,20 +298,25 @@ class GTA3BaseModel(L.LightningModule):
             except:
                 raise ValueError("Invalid alpha_init parameter!", model_params['alpha_init'])
 
-        if model_params['alpha_init'] == 'per_model' and alpha.numel() != 1:
+        if model_params['alpha'] == 'per_model' and alpha.numel() != 1:
             raise ValueError(f"Invalid alpha_init parameter (because of `per_model`)! Expected 1 value, got {alpha.numel()}!")
-        elif model_params['alpha_init'] == 'per_layer':
+        elif model_params['alpha'] == 'per_layer':
             try:
-                alpha = alpha.expand((n_layers,))
+                alpha = alpha.expand(n_layers).clone()  # clone necessary (torch is lazy o/w)
             except:
                 raise ValueError(f"Invalid alpha_init parameter (because of `per_layer`)! cannot expand {alpha.shape} to ({n_layers},)!")
-        elif model_params['alpha_init'] == 'per_head':
+        elif model_params['alpha'] == 'per_head':
             raise NotImplementedError("per head alpha not implemented")
         
-        if model_params['alpha_init'] == 'fixed':
+        if model_params['alpha'] == 'fixed':
             self.register_buffer("alpha", alpha)
         else:
             self.alpha = torch.nn.Parameter(alpha)
+            if model_params['alpha_init'] == 'per_layer' and self.alpha.numel() != n_layers:
+                raise ValueError(f"Invalid alpha_init parameter (because of `per_layer`)! Expected {n_layers} values, got {self.alpha.numel()}!")
+            elif model_params['alpha_init'] == 'per_head' and self.alpha.numel() != model_params['num_heads'] * n_layers:
+                raise ValueError(f"Invalid alpha_init parameter (because of `per_head`)! Expected {model_params['num_heads'] * n_layers} values, got {self.alpha.numel()}!")
+        print(f"alpha: {self.alpha}")
         
         self.per_layer_alpha = self.alpha.dim() >= 1
 
