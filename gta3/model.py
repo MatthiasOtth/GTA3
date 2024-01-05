@@ -35,7 +35,7 @@ def phi_alpha_pow_dist_exp(a, A, alpha):
 
 def alpha_pow_dist_sigmoid(a, A, alpha):
     """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
-    new_a = a * torch.sigmoid(A * alpha)
+    new_a = a * torch.pow(torch.sigmoid(alpha), A)
     new_a = torch.where(A==0, torch.zeros_like(a), new_a)
     return new_a
 
