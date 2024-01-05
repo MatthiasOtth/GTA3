@@ -411,7 +411,7 @@ class GTA3BaseModel(L.LightningModule):
             {'params': default_params},
         ]
         if isinstance(self.alpha, torch.nn.Parameter):
-            param_groups.append({'params': self.alpha, 'lr': self.train_params['alpha_lr']})
+            param_groups.append({'params': self.alpha, 'lr': self.train_params['lr_alpha']})
 
         optimizer = optim.Adam(
             param_groups,
