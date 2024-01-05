@@ -158,20 +158,31 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         attention = attention.masked_fill(mask, float(0))
         # reweight using the adjacency information
         attention = attention.moveaxis(1,0)
-        log_dict = {}
         A_t = A.transpose(-1,-2)
-        log_dict["attention/attention_pre_transform_d1"]  = attention[:,A_t==1].mean(), attention[:,A_t==1].reshape(-1).shape[0]
-        log_dict["attention/attention_pre_transform_d2+"] = attention[:,A_t >1].mean(), attention[:,A_t >1].reshape(-1).shape[0]
-
-        attention = self.phi(attention, A_t, alpha)
-
-        log_dict["attention/attention_post_transform_d1"]  = attention[:,A_t==1].mean(), attention[:,A_t==1].reshape(-1).shape[0]
-        log_dict["attention/attention_post_transform_d2+"] = attention[:,A_t >1].mean(), attention[:,A_t >1].reshape(-1).shape[0]
-        attention = attention.moveaxis(0,1)
         
+        log_dict = {}
+        log_dict["attention/attn_hist_pre_transform"] = self._attn_hist(self, attention, A_t)
+        attention = self.phi(attention, A_t, alpha)
+        log_dict["attention/attn_hist_post_transform"] = self._attn_hist(self, attention, A_t)
+
+        attention = attention.moveaxis(0,1)        
         # sum value tensors scaled by the attention weights
         h_heads = torch.matmul(attention, V_h)
         return h_heads, log_dict
+    
+    @staticmethod
+    def _attn_hist(self, attention, A_t, d=5):
+        with torch.no_grad():
+            bin_edges = torch.arange(0, d+1, dtype=torch.float, device=attention.device)
+            attn = attention.mean(dim=0).mean(dim=0)  # mean over batch and heads
+            # sum-up attention weights for each distance
+            count = torch.zeros((d,), dtype=torch.float, device=attention.device)
+            for i in range(d):
+                if i != d-1:
+                    count[i] = attn[A_t==i].sum()
+                else:
+                    count[i] = attn[A_t>=i].sum()
+        return count, bin_edges
 
 
 class GTA3Layer(nn.Module):
