@@ -16,7 +16,7 @@
         "num_layers": 16,
         "pos_encoding": "none",
         "pos_enc_dim": 8,
-        "dropout": 0.2,
+        "dropout": 0.1,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,
@@ -24,7 +24,7 @@
     },
     "train_params": {
         "lr": 5e-4,
-        "lr_alpha": 1e-1,
+        "lr_alpha": 5e-2,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
