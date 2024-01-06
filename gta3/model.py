@@ -245,6 +245,10 @@ class GTA3Layer(nn.Module):
         self.FFN_layer_1 = nn.Linear(out_dim, out_dim * 2)
         self.FFN_layer_2 = nn.Linear(out_dim * 2, out_dim)
 
+        self.dropout_pre_ff = nn.Dropout(p=0.1)
+        self.dropout_ff = nn.Dropout(p=0.1)
+        self.dropout_post_ff = nn.Dropout(p=0.1)
+
         if batch_norm:
             self.batch_norm_1 = nn.BatchNorm1d(out_dim)
             self.batch_norm_2 = nn.BatchNorm1d(out_dim)
@@ -281,6 +285,7 @@ class GTA3Layer(nn.Module):
         # residual & normalization
         if self.residual_heads:
             h = h_in + h
+
         if self.batch_norm:
             h = h.moveaxis(-1,-2)
             h = self.batch_norm_1(h) # TODO: check that this is correct
@@ -289,15 +294,18 @@ class GTA3Layer(nn.Module):
             h = self.layer_norm_1(h)
         
         # feed forward network
+        h = self.dropout_pre_ff(h)
         h_tmp = h
         h = self.FFN_layer_1(h)
         h = F.relu(h)
-        h = F.dropout(h, training=self.training)
+        h = self.dropout_ff(h)
         h = self.FFN_layer_2(h)
+        h = self.dropout_post_ff(h)
 
         # residual & normalization
         if self.residual_ffn:
             h = h_tmp + h
+
         if self.batch_norm:
             h = h.moveaxis(-1,-2)
             h = self.batch_norm_2(h) # TODO: check that this is correct
