@@ -22,17 +22,17 @@
         "attention_bias": true
     },
     "train_params": {
-        "lr": 5e-4,
+        "lr": 1e-3,
         "lr_alpha": 1e-1,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
         "batch_size": 128,
         "lr_reduce_factor": 0.5,
-        "lr_schedule_patience": 20
+        "lr_schedule_patience": 5
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500kmatthias_sota_patience20"
+        "name": "zinc_gta3_500kmatthias_sota_new_dropout"
     }
 }
