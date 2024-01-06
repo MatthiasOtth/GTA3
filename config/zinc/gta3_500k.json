@@ -24,7 +24,7 @@
     },
     "train_params": {
         "lr": 1e-3,
-        "lr_alpha": 1e-2,
+        "lr_alpha": 1e-1,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
