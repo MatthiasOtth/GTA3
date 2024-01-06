@@ -292,7 +292,7 @@ class GTA3Layer(nn.Module):
         h_tmp = h
         h = self.FFN_layer_1(h)
         h = F.relu(h)
-        h = F.dropout(h)
+        h = F.dropout(h, training=self.training)
         h = self.FFN_layer_2(h)
 
         # residual & normalization
