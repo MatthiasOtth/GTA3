@@ -5,6 +5,7 @@ from dgl.data import CLUSTERDataset
 from dgl import add_self_loop
 
 from gnn.model import GNNBaseModel
+from common.mlp_readout import MLPReadout
 
 
 class GNN_CLUSTER_DataLoader(GraphDataLoader):
@@ -42,12 +43,7 @@ class GNN_CLUSTER(GNNBaseModel):
         super().__init__(gnn_type, model_params, train_params)
 
         # final readout mlp
-        self.out_mlp = nn.Sequential(
-            nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), 
-            nn.ReLU(), 
-            nn.Dropout(), 
-            nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types'])
-        )
+        self.out_mlp = MLPReadout(model_params['out_dim'], model_params['num_out_types'])
 
         # loss function
         self.criterion = nn.CrossEntropyLoss()

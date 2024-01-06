@@ -1,17 +1,15 @@
 #!/bin/bash
 
 #SBATCH -A deep_learning
-#SBATCH --job=gta3_train
-#SBATCH --gpus=1
-#SBATCH --time=1:00:00
-#SBATCH --output=/home/maotth/log/%j.out    # where to store the output (%j is the JOBID), subdirectory "log" must exist
-#SBATCH --error=/home/maotth/log/%j.err     # where to store error messages
+#SBATCH --job=gta3
+#SBATCH --gpus=1  # max
+#SBATCH --cpus-per-task=2  # max=2
+#SBATCH --time=4:00:00
+#SBATCH --mem-per-cpu=8G
+#SBATCH --tmp=8G
+#SBATCH --output=/home/%u/GTA3/logs/euler/%j.out
+#SBATCH --error=/home/%u/GTA3/logs/euler/%j.err
 
-# #SBATCH --mem-per-cpu=4G
-# #SBATCH --tmp=8G
-
-#Activate conda
-source $HOME/miniconda3/bin/activate gta3
 # Exit on errors
 set -o errexit
 
@@ -21,13 +19,19 @@ echo "In directory:    $(pwd)"
 echo "Starting on:     $(date)"
 echo "SLURM_JOB_ID:    ${SLURM_JOB_ID}"
 
-# Binary or script to execute
-# load module
-# use the correct python
+# ensure logs dirs exit
+mkdir -p $HOME/GTA3/logs/euler
 
-mkdir -p $HOME/log
+# run
+cd $HOME/GTA3
 
-python $HOME/GTA3/zinc_main.py config/zinc/gta3_default.json
+source .venv/bin/activate
+echo "python: $(which python3)"
+echo "python version: $(python3 --version)"
+
+srun python3 zinc_main.py config/zinc/gta3_500k.json
+
+cd --
 
 # We could copy more results from here to output or any other permanent directory
 

@@ -1,15 +1,15 @@
 {
     "model": "gta3",
-    "dataset": "zinc",
+    "dataset": "cluster",
     "model_params": {
-        "hidden_dim": 32,
-        "out_dim": 32,
+        "hidden_dim": 64,
+        "out_dim": 64,
         "phi": "inverse_hops",
         "alpha": "per_layer",
-        "alpha_init": 0.3,
+        "alpha_init": 1,
         "alpha_weight": 0,
-        "num_heads": 2,
-        "num_layers": 2,
+        "num_heads": 4,
+        "num_layers": 6,
         "pos_encoding": "wl",
         "pos_enc_dim": 8,
         "residual": true,
@@ -20,14 +20,15 @@
     "train_params": {
         "lr": 1e-3,
         "weight_decay": 0.0,
-        "lr_threshold": 1e-5,
+        "max_epochs": 100,
         "seed": 0,
-        "batch_size": 128,
+        "batch_size": 64,
         "lr_reduce_factor": 0.5,
-        "lr_schedule_patience": 5
+        "lr_schedule_patience": 5,
+        "lr_threshold": 1e-5
     },
     "logging": {
-        "save_dir": "logs/zinc",
-        "name": "zinc_gta3_2layer_test_euler"
+        "save_dir": "logs/cluster",
+        "name": "cluster_gta3"
     }
 }

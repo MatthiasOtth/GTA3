@@ -13,6 +13,12 @@ def phi_simple_adj_weighting(a, A, alpha):
     new_a = a * (1-alpha) + A * alpha
     return new_a
 
+def phi_local(a, A, alpha):
+    """ assumes A is adjacency matrix """
+    new_a = torch.where(A==1, a, torch.zeros_like(a))
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
 def phi_alpha_pow_dist(a, A, alpha):
     alpha = torch.clamp(alpha, min=0) #, max=1)
     new_a = torch.pow(alpha + 1e-10, A) * a
@@ -20,18 +26,65 @@ def phi_alpha_pow_dist(a, A, alpha):
     new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
-def phi_inverse_hops(a, A, alpha):
-    # Assumes that A is shortest path matrix
-    if alpha == 0:
-        new_a = torch.where(A==1, a, torch.zeros_like(a))
-    else:
-        x = torch.clamp(1/torch.abs(alpha), max=10)
-        #TODO: Rewrite so we don't need epsilon
-        new_a = 1./(torch.pow(A, x) * a + 1e-5)
-        new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+def phi_alpha_pow_dist_exp(a, A, alpha):
+    """ a * (e^alpha)^A where A is (transposed) shortest path matrix """
+    new_a = a * torch.exp(A * alpha)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
     new_a = F.normalize(new_a, p=1, dim=-1)
-    # new_a = F.softmax(new_a, dim=-1)
+    return new_a
 
+def alpha_pow_dist_sigmoid(a, A, alpha):
+    """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
+    new_a = a * torch.pow(torch.sigmoid(alpha), A)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    return new_a
+
+def phi_alpha_pow_dist_sigmoid(a, A, alpha):
+    """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
+    new_a = alpha_pow_dist_sigmoid(a, A, alpha)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
+def phi_alpha_pow_dist_sigmoid_softmax(a, A, alpha):
+    """ a * sigmoid(alpha)^A where A is (transposed) shortest path matrix """
+    new_a = alpha_pow_dist_sigmoid(a, A, alpha)
+    new_a = F.softmax(new_a, dim=-1)
+    return new_a
+
+def phi_gaussian_std1(a, A, alpha):
+    """ a * gaussian(A; exp(alpha), 1) """
+    mu = 1 + torch.exp(alpha)
+    p = torch.exp(-0.5 * torch.pow(A - mu, 2))
+    new_a = a * p
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
+def phi_inverse_hops(a, A, alpha):
+    """ a * A^{-1/alpha} """
+    alpha = torch.clamp(alpha, min=1e-8)
+    new_a = a * torch.pow(A, -1/alpha)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
+def phi_inverse_hops_exp(a, A, alpha):
+    """ a * A^{-1/exp(alpha)} """
+    new_a = a * torch.pow(A, -1/torch.exp(alpha))
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
+def phi_poisson_exp(a, A, alpha):
+    """ a * poisson(A; alpha) """
+    # log prob from torch.distributions.poisson: value.xlogy(rate) - rate - (value + 1).lgamma()
+    rate_log = alpha  # we learn exp(rate) bc it is always positive
+    rate = torch.exp(rate_log)
+    value = A
+    log_prob = value * rate_log - rate - (value + 1).lgamma()
+    new_a = a * torch.exp(log_prob)
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
 
@@ -47,7 +100,6 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
           phi:       the weighting function to be used
           num_heads: the number of attention heads to be used (default: 8)
           bias:      whether the attention matrices (Q, K, V) use a bias or not (default: True)
-
         """
         super().__init__()
 
@@ -88,7 +140,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         V_h = einops.rearrange(V_h, 'b n (k d) -> b k n d', d=self.out_dim)
 
         # compute the dot products
-        attention = torch.matmul(Q_h, K_h.transpose(-1,-2))
+        attention = torch.matmul(Q_h, K_h.transpose(-1,-2))  # [batch, heads, nodes, nodes]
 
         #TODO: Optimize generation of mask
         mask = torch.full((attention.shape[0], attention.shape[2]), False, device=attention.device)
@@ -124,7 +176,17 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
 
 class GTA3Layer(nn.Module):
 
-    def __init__(self, in_dim, out_dim, phi, num_heads=8, residual=True, batch_norm=False, layer_norm=True, attention_bias=True):
+    def __init__(
+        self,
+        in_dim,
+        out_dim,
+        phi,
+        num_heads=8,
+        residual=True,
+        batch_norm=False,
+        layer_norm=True,
+        attention_bias=True,
+    ):
         """
         Graph Transformer with Adjacency Aware Attention (GTA3) layer.
 
@@ -137,7 +199,6 @@ class GTA3Layer(nn.Module):
           batch_norm:     whether to use batch normalization (default: False)
           layer_norm:     whether to use layer normalization (default: True)
           attention_bias: whether the attention matrices (Q, K, V) use a bias or not (default: True)
-
         """
         super().__init__()
         assert out_dim%num_heads == 0, f"GTA3 Error: out_dim ({out_dim}) must be divisible by num_heads ({num_heads})!"
@@ -150,18 +211,37 @@ class GTA3Layer(nn.Module):
 
         if phi == 'none':
             self.phi = phi_no_weighting
+        elif phi == 'local':
+            self.phi = phi_local
         elif phi == 'test':
             self.phi = phi_simple_adj_weighting
         elif phi == 'inverse_hops':
             self.phi = phi_inverse_hops
+        elif phi == 'inverse_hops_exp':
+            self.phi = phi_inverse_hops_exp
         elif phi == 'alpha_pow_dist':
             self.phi = phi_alpha_pow_dist
+        elif phi == 'alpha_pow_dist_exp':
+            self.phi = phi_alpha_pow_dist_exp
+        elif phi == 'alpha_pow_dist_sigmoid':
+            self.phi = phi_alpha_pow_dist_sigmoid
+        elif phi == 'alpha_pow_dist_sigmoid_softmax':
+            self.phi = phi_alpha_pow_dist_sigmoid_softmax
+        elif phi == 'phi_poisson_exp':
+            self.phi = phi_poisson_exp
+        elif phi == 'gaussian_std1':
+            self.phi = phi_gaussian_std1
         else:
-            print(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
-            exit()
+            raise NotImplementedError(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
 
         self.O = nn.Linear(out_dim, out_dim)
-        self.aa_attention = AdjacencyAwareMultiHeadAttention(in_dim=in_dim, out_dim=out_dim//num_heads, phi=self.phi, num_heads=num_heads, bias=attention_bias)
+        self.aa_attention = AdjacencyAwareMultiHeadAttention(
+            in_dim=in_dim,
+            out_dim=out_dim//num_heads,
+            phi=self.phi,
+            num_heads=num_heads,
+            bias=attention_bias,
+        )
         self.FFN_layer_1 = nn.Linear(out_dim, out_dim * 2)
         self.FFN_layer_2 = nn.Linear(out_dim * 2, out_dim)
 
@@ -228,6 +308,8 @@ class GTA3Layer(nn.Module):
     
 
 class GTA3BaseModel(L.LightningModule):
+    score_direction = None
+    score_name = None
     
     def __init__(self, model_params, train_params):
         """
@@ -243,26 +325,49 @@ class GTA3BaseModel(L.LightningModule):
         self.train_params = train_params
 
         # initialize the alpha value
-        if model_params['alpha'] == 'fixed':
-            self.per_layer_alpha = False
-            self.alpha = torch.tensor([model_params['alpha_init']], dtype=torch.float)
-        elif model_params['alpha'] == 'per_model': # TODO: test this...
-            self.per_layer_alpha = False
-            self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init']], dtype=torch.float))
-        elif model_params['alpha'] == 'per_layer': # TODO: test this...
-            self.per_layer_alpha = True
-            if type(model_params['alpha_init']) == list:
-                assert len(model_params['alpha_init']) == model_params['num_layers'], \
-                    f"Number of layers ({model_params['num_layers']}) does not match number of initial alpha values given ({len(model_params['alpha_init'])})!"
-                self.alpha = torch.nn.Parameter(torch.tensor(model_params['alpha_init'], dtype=torch.float))
-            else:
-                self.alpha = torch.nn.Parameter(torch.tensor([model_params['alpha_init'] for _ in range(model_params['num_layers'])], dtype=torch.float))
-        elif model_params['alpha'] == 'per_head': # TODO: test this...
-            self.per_layer_alpha = True
-            # TODO: implement
-            raise NotImplementedError("alpha per head is not yet implemented...")
+        n_layers = model_params['num_layers']
+        if isinstance(model_params['alpha_init'], str):
+            if model_params['alpha_init'] == 'linear_inc_dec':
+                lb, ub = model_params['alpha_init_kwargs']['lb'], model_params['alpha_init_kwargs']['ub']
+                if n_layers % 2 == 0:
+                    a = torch.linspace(lb, ub, n_layers//2)
+                    alpha = torch.cat([a, a.flip(0)])
+                else:
+                    a = torch.linspace(lb, ub, n_layers//2+1)
+                    alpha = torch.cat([a[:-1], a.flip(0)])
+            elif model_params['alpha_init'] == 'linear_inc':
+                lb, ub = model_params['alpha_init_kwargs']['lb'], model_params['alpha_init_kwargs']['ub']
+                alpha = torch.linspace(lb, ub, n_layers)
+            elif model_params['alpha_init'] == 'linear_dec':
+                lb, ub = model_params['alpha_init_kwargs']['lb'], model_params['alpha_init_kwargs']['ub']
+                alpha = torch.linspace(ub, lb, n_layers)
         else:
-            raise ValueError("Invalid alpha model parameter!", model_params['alpha'])
+            try:
+                alpha = torch.tensor(model_params['alpha_init'], dtype=torch.float)
+            except:
+                raise ValueError("Invalid alpha_init parameter!", model_params['alpha_init'])
+
+        if model_params['alpha'] == 'per_model' and alpha.numel() != 1:
+            raise ValueError(f"Invalid alpha_init parameter (because of `per_model`)! Expected 1 value, got {alpha.numel()}!")
+        elif model_params['alpha'] == 'per_layer':
+            try:
+                alpha = alpha.expand(n_layers).clone()  # clone necessary (torch is lazy o/w)
+            except:
+                raise ValueError(f"Invalid alpha_init parameter (because of `per_layer`)! cannot expand {alpha.shape} to ({n_layers},)!")
+        elif model_params['alpha'] == 'per_head':
+            raise NotImplementedError("per head alpha not implemented")
+        
+        if model_params['alpha'] == 'fixed':
+            self.register_buffer("alpha", alpha)
+        else:
+            self.alpha = torch.nn.Parameter(alpha)
+            if model_params['alpha_init'] == 'per_layer' and self.alpha.numel() != n_layers:
+                raise ValueError(f"Invalid alpha_init parameter (because of `per_layer`)! Expected {n_layers} values, got {self.alpha.numel()}!")
+            elif model_params['alpha_init'] == 'per_head' and self.alpha.numel() != model_params['num_heads'] * n_layers:
+                raise ValueError(f"Invalid alpha_init parameter (because of `per_head`)! Expected {model_params['num_heads'] * n_layers} values, got {self.alpha.numel()}!")
+        print(f"alpha: {self.alpha}")
+        
+        self.per_layer_alpha = self.alpha.dim() >= 1
 
         # creates an embedding depending on the node type
         self.embedding = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim'])
@@ -299,9 +404,41 @@ class GTA3BaseModel(L.LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
-        raise NotImplementedError("GTA3BaseModel: Define training_step function!")
+        raise NotImplementedError("GTA3BaseModel: Define validation_step function!")
+
+    
+    def test_step(self, batch, batch_idx):
+        raise NotImplementedError("GTA3BaseModel: Define test_step function!")
 
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.train_params['lr'])
-        return optimizer
+        if not hasattr(self, "score_direction") or self.score_direction is None:
+            raise NotImplementedError("GTA3BaseModel: Define score_direction attribute! (min|max)")
+        if not hasattr(self, "score_name") or self.score_name is None:
+            raise NotImplementedError("GTA3BaseModel: Define score_name attribute! (e.g. 'val_loss')")
+        
+        default_params = [p for p in self.parameters() if p is not self.alpha]
+        param_groups = [
+            {'params': default_params},
+        ]
+        if isinstance(self.alpha, torch.nn.Parameter):
+            param_groups.append({'params': self.alpha, 'lr': self.train_params['lr_alpha']})
+
+        optimizer = optim.Adam(
+            param_groups,
+            lr=self.train_params['lr'],
+            weight_decay=self.train_params['weight_decay']
+        )
+        print(f"Optimizer: {optimizer}")
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode=self.score_direction,
+            factor=self.train_params['lr_reduce_factor'],
+            patience=self.train_params['lr_schedule_patience'],
+            verbose=True
+        )
+        print(f"LR-Scheduler: {scheduler}")
+        return (
+            [optimizer],
+            [{'scheduler': scheduler, 'interval': 'epoch', 'monitor': self.score_name, 'strict': False}]
+        )

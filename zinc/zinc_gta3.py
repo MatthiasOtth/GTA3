@@ -8,6 +8,8 @@ from gta3.model import GTA3BaseModel
 from gta3.dataloader import GTA3BaseDataset
 from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
 
+from common.mlp_readout import MLPReadout
+
 
 class GTA3_ZINC_Dataset(GTA3BaseDataset):
 
@@ -57,21 +59,16 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
 class GTA3_ZINC(GTA3BaseModel):
     
     def __init__(self, model_params, train_params):
+
+        # set the score direction and name for lr scheduler
+        self.score_direction = "min"
+        self.score_name = "valid_loss"
         
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
         # final mlp to map the out dimension to a single value
-        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, 1))
-        # self.out_mlp = nn.Sequential(
-        #     nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2),
-        #     nn.ReLU(), 
-        #     # nn.Dropout(), 
-        #     nn.Linear(model_params['out_dim'] * 2, model_params['out_dim'] // 2),
-        #     nn.ReLU(), 
-        #     # nn.Dropout(), 
-        #     nn.Linear(model_params['out_dim'] // 2, 1),
-        # )
+        self.out_mlp = MLPReadout(model_params['out_dim'], 1)
         
         # loss functions
         if model_params['alpha'] == 'fixed':
@@ -92,8 +89,6 @@ class GTA3_ZINC(GTA3BaseModel):
             - lengths: [B]
 
         """
-        self.alpha = self.alpha.to(device=self.device)
-
         # create embeddings
         h = self.embedding(x)
 
@@ -104,7 +99,7 @@ class GTA3_ZINC(GTA3BaseModel):
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
-            if self.per_layer_alpha: 
+            if self.per_layer_alpha:
                 h, log_dict = layer.forward(h, A, lengths, self.alpha[idx])
             else:
                 h, log_dict = layer.forward(h, A, lengths, self.alpha)
@@ -139,6 +134,15 @@ class GTA3_ZINC(GTA3BaseModel):
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=1)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=1)
 
+        for io, opt in enumerate(self.trainer.optimizers):
+            prefix = f"optim_{io}_" if len(self.trainer.optimizers) > 1 else ""
+            for i, param_group in enumerate(opt.param_groups):
+                if 'lr' in param_group:
+                    self.log(
+                        "lr/" + prefix + f"group_{i}_lr", param_group['lr'], 
+                        on_epoch=True, on_step=False, batch_size=1
+                    )
+
         return train_loss
     
 
@@ -152,7 +156,22 @@ class GTA3_ZINC(GTA3BaseModel):
         valid_loss = self.valid_loss_func(y_pred, y_true)
 
         # log loss
-        self.log("valid_loss", valid_loss, on_epoch=True, on_step=False, batch_size=1)
+        self.log(self.score_name, valid_loss, on_epoch=True, on_step=False, batch_size=1, prog_bar=True)
+
+        return valid_loss
+    
+
+    def test_step(self, batch, batch_idx):
+        lengths, x, A, pos_enc, y_true = batch
+
+        # forward pass
+        y_pred = self.forward_step(x, A, pos_enc, lengths)
+
+        # compute loss
+        valid_loss = self.valid_loss_func(y_pred, y_true)
+
+        # log loss
+        self.log("test_loss", valid_loss, on_epoch=True, on_step=False, batch_size=1)
 
         return valid_loss
     

@@ -8,6 +8,8 @@ import argparse
 from neighborsmatch.nbm_gta3 import GTA3_NBM, GTA3_NBM_Dataset
 from neighborsmatch.nbm_gnn import GNN_NBM, GNN_NBM_DataLoader
 
+from util.lightning_util import StopOnLrCallback
+
 def main():
     # arguments
     parser = argparse.ArgumentParser(description='Main program to train and evaluate models based on the neighborhood match problem.')
@@ -47,10 +49,15 @@ def main():
         valid_loader = GTA3_NBM_Dataset('valid', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'], 
                                         pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
                                         force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+        test_loader  = GTA3_NBM_Dataset('test', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'],
+                                        pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
+                                        force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
     elif config['model'] in ('gcn', 'gat'):
         train_loader = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
                                           force_regenerate=args.force_regenerate, generator_seed=config['train_params']['seed'])
         valid_loader = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
+                                          generator_seed=config['train_params']['seed'])
+        test_loader  = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'],
                                           generator_seed=config['train_params']['seed'])
     else:
         raise ValueError(f"Unkown model {config['model']} in config file {args.config}!")
@@ -73,8 +80,16 @@ def main():
         logger.log_hyperparams(config)
     else:
         logger = None
-    trainer = L.Trainer(max_epochs=config['train_params']['max_epochs'], logger=logger, check_val_every_n_epoch=config['train_params']['valid_interval'])
+    trainer = L.Trainer(
+        max_epochs=config['train_params']['max_epochs'], 
+        logger=logger, 
+        check_val_every_n_epoch=1,  # needed for lr scheduler
+        callbacks=[StopOnLrCallback(lr_threshold=config['train_params']['lr_threshold'], on_val=True)],
+    )
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
+
+    # evaluate the model
+    trainer.test(model=model, dataloaders=test_loader, verbose=True)
 
 
 if __name__ == '__main__':

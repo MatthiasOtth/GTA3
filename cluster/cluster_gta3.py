@@ -8,6 +8,7 @@ from dgl.data.utils import save_info, load_info
 
 from gta3.model import GTA3BaseModel
 from gta3.dataloader import GTA3BaseDataset, transform_to_graph_list
+from common.mlp_readout import MLPReadout
 
 
 class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
@@ -64,12 +65,16 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
 class GTA3_CLUSTER(GTA3BaseModel):
     
     def __init__(self, model_params, train_params):
+
+        # init score name and direction for lr scheduler
+        self.score_name = 'valid_accuracy'
+        self.score_direction = 'max'
         
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
         # final mlp to map the out dimension to a single value
-        self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
+        self.out_mlp = MLPReadout(model_params['out_dim'], model_params['num_out_types'])
         
         # loss functions
         self.criterion = nn.CrossEntropyLoss()
@@ -95,7 +100,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
-            if self.per_layer_alpha: 
+            if self.per_layer_alpha:
                 h, log_dict = layer.forward(h, A, lengths, self.alpha[idx])
             else:
                 h, log_dict = layer.forward(h, A, lengths, self.alpha)
@@ -128,6 +133,8 @@ class GTA3_CLUSTER(GTA3BaseModel):
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=batch_size)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
 
+        self.log("lr", self.trainer.optimizers[0].param_groups[0]['lr'], on_epoch=False, on_step=True, batch_size=batch_size)
+
         return train_loss
     
 
@@ -144,7 +151,25 @@ class GTA3_CLUSTER(GTA3BaseModel):
         accuracy = (preds == labels).sum().float() / total
 
         # log accuracy
-        self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+        self.log(self.score_name, accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+
+        return accuracy
+
+
+    def test_step(self, batch, batch_idx):
+        lengths, x, A, pos_enc, labels, _ = batch
+        batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
+
+        # forward pass
+        preds = self.forward_step(x, A, pos_enc, lengths)
+
+        # compute accuracy
+        total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)
+        preds = torch.argmax(preds, dim=-1)
+        accuracy = (preds == labels).sum().float() / total
+
+        # log accuracy
+        self.log("test_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return accuracy
     

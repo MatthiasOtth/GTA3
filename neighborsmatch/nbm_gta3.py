@@ -96,8 +96,11 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
 
 class GTA3_NBM(GTA3BaseModel):
     
-    def __init__(self, model_params, train_params):
-        
+    def __init__(self, model_params, train_params):    
+
+        # setup score name and direction for lr scheduler
+        self.score_name = "valid_accuracy"
+        self.score_direction = "max"
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
@@ -135,7 +138,7 @@ class GTA3_NBM(GTA3BaseModel):
 
         # pass through transformer layers
         for idx, layer in enumerate(self.gta3_layers):
-            if self.per_layer_alpha: 
+            if self.per_layer_alpha:
                 h, log_dict = layer.forward(h, A, lengths, self.alpha[idx])
             else:
                 h, log_dict = layer.forward(h, A, lengths, self.alpha)
@@ -167,6 +170,8 @@ class GTA3_NBM(GTA3BaseModel):
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=batch_size)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
 
+        self.log("lr", self.trainer.optimizers[0].param_groups[0]['lr'], on_epoch=False, on_step=True, batch_size=batch_size)
+
         return train_loss
     
 
@@ -189,6 +194,24 @@ class GTA3_NBM(GTA3BaseModel):
 
         # log accuracy
         self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+
+        return accuracy
+
+
+    def test_step(self, batch, batch_idx):
+        lengths, x, A, pos_enc, labels = batch
+        batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
+
+        # forward pass
+        preds = self.forward_step(x, A, pos_enc, lengths)
+
+        # compute accuracy
+        total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)
+        preds = torch.argmax(preds, dim=-1)
+        accuracy = (preds == labels.squeeze(-1)).sum().float() / total
+
+        # log accuracy
+        self.log("test_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return accuracy
     

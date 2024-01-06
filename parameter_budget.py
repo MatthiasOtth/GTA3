@@ -1,7 +1,7 @@
 # Parameters to tweak
 # Set at most 1 parameter to -1
-NUM_LAYERS = 1
-HIDDEN_DIM = 88
+NUM_LAYERS = 16
+HIDDEN_DIM = -1
 OUT_DIM = 1
 PARAM_BUDGET_CUST  = 1_000_000
 # Parameters are independant of number of heads
