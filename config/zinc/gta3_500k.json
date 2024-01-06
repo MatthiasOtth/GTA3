@@ -4,7 +4,7 @@
     "model_params": {
         "hidden_dim": 56,
         "out_dim": 128,
-        "phi": "gaussian_std1",
+        "phi": "alpha_pow_dist_sigmoid",
         "alpha": "per_layer",
         "alpha_init": 0.0,
         "alpha_init_kwargs": {
@@ -22,8 +22,8 @@
         "attention_bias": true
     },
     "train_params": {
-        "lr": 1e-4,
-        "lr_alpha": 0.1,
+        "lr": 1e-3,
+        "lr_alpha": 1.0,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
@@ -33,6 +33,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500kmatthias_lr1e-4_gaussian1_init0_patience20"
+        "name": "zinc_gta3_500kmatthias_sota_patience20"
     }
 }
