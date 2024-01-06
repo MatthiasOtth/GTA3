@@ -16,6 +16,7 @@
         "num_layers": 4,
         "pos_encoding": "none",
         "pos_enc_dim": 8,
+        "dropout": 0.2,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,

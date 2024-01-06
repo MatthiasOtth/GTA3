@@ -182,6 +182,7 @@ class GTA3Layer(nn.Module):
         out_dim,
         phi,
         num_heads=8,
+        dropout=0.1,
         residual=True,
         batch_norm=False,
         layer_norm=True,
@@ -195,6 +196,7 @@ class GTA3Layer(nn.Module):
           out_dim:        the dimension of the output vectors
           phi:            the weighting function to be used
           num_heads:      the number of attention heads to be used (default: 8)
+          dropout:        the dropout probability (default: 0.1)
           residual:       whether to use residual connections (default: True) (note that if in_dim != out_dim the heads will not have a residual connection)
           batch_norm:     whether to use batch normalization (default: False)
           layer_norm:     whether to use layer normalization (default: True)
@@ -245,9 +247,9 @@ class GTA3Layer(nn.Module):
         self.FFN_layer_1 = nn.Linear(out_dim, out_dim * 2)
         self.FFN_layer_2 = nn.Linear(out_dim * 2, out_dim)
 
-        self.dropout_pre_ff = nn.Dropout(p=0.1)
-        self.dropout_ff = nn.Dropout(p=0.1)
-        self.dropout_post_ff = nn.Dropout(p=0.1)
+        self.dropout_pre_ff = nn.Dropout(p=dropout)
+        self.dropout_ff = nn.Dropout(p=dropout)
+        self.dropout_post_ff = nn.Dropout(p=dropout)
 
         if batch_norm:
             self.batch_norm_1 = nn.BatchNorm1d(out_dim)
@@ -295,7 +297,7 @@ class GTA3Layer(nn.Module):
         
         # feed forward network
         h = self.dropout_pre_ff(h)
-        h_tmp = h
+        h_tmp = h  # yes, first dropout is before residual connection
         h = self.FFN_layer_1(h)
         h = F.relu(h)
         h = self.dropout_ff(h)
@@ -396,14 +398,14 @@ class GTA3BaseModel(L.LightningModule):
             [ GTA3Layer(
                 in_dim=model_params['hidden_dim'], out_dim=model_params['hidden_dim'], num_heads=model_params['num_heads'], phi=model_params['phi'],
                 residual=model_params['residual'], batch_norm=model_params['batch_norm'], layer_norm=model_params['layer_norm'], 
-                attention_bias=model_params['attention_bias']) 
+                attention_bias=model_params['attention_bias'], dropout=model_params['dropout']) 
             for _ in range(model_params['num_layers']-1) ]
         )
         self.gta3_layers.append(
             GTA3Layer(
                 in_dim=model_params['hidden_dim'], out_dim=model_params['out_dim'], num_heads=model_params['num_heads'], phi=model_params['phi'],
                 residual=model_params['residual'], batch_norm=model_params['batch_norm'], layer_norm=model_params['layer_norm'],
-                attention_bias=model_params['attention_bias'])
+                attention_bias=model_params['attention_bias'], dropout=model_params['dropout'])
         )
 
 
