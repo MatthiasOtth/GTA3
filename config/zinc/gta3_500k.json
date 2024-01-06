@@ -16,24 +16,24 @@
         "num_layers": 16,
         "pos_encoding": "none",
         "pos_enc_dim": 8,
-        "dropout": 0.1,
+        "dropout": 0.2,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,
         "attention_bias": true
     },
     "train_params": {
-        "lr": 5e-4,
-        "lr_alpha": 5e-2,
+        "lr": 1e-3,
+        "lr_alpha": 1e-2,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
         "batch_size": 128,
         "lr_reduce_factor": 0.5,
-        "lr_schedule_patience": 20
+        "lr_schedule_patience": 5
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500kmatthias_sota_new_dropout_fix"
+        "name": "zinc_gta3_500kmatthias_sota_lr1e-3_init-experiment"
     }
 }
