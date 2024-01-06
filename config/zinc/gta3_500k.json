@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500kmatthias_sota_new_dropout"
+        "name": "zinc_gta3_500kmatthias_sota_new_dropout_fix"
     }
 }

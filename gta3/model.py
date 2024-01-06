@@ -87,6 +87,13 @@ def phi_poisson_exp(a, A, alpha):
     new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
+def phi_sigmoid_shift(a, A, alpha):
+    """ a * (1 - sigmoid(A - exp(alpha))) """
+    new_a = a * (1 - torch.sigmoid(A - torch.exp(alpha)))
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
 
 class AdjacencyAwareMultiHeadAttention(nn.Module):
 
@@ -233,6 +240,8 @@ class GTA3Layer(nn.Module):
             self.phi = phi_poisson_exp
         elif phi == 'gaussian_std1':
             self.phi = phi_gaussian_std1
+        elif phi == 'sigmoid_shift':
+            self.phi = phi_sigmoid_shift
         else:
             raise NotImplementedError(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
 
@@ -247,9 +256,9 @@ class GTA3Layer(nn.Module):
         self.FFN_layer_1 = nn.Linear(out_dim, out_dim * 2)
         self.FFN_layer_2 = nn.Linear(out_dim * 2, out_dim)
 
-        self.dropout_pre_ff = nn.Dropout(p=dropout)
+        self.residual_dropout_sa = nn.Dropout(p=dropout)
         self.dropout_ff = nn.Dropout(p=dropout)
-        self.dropout_post_ff = nn.Dropout(p=dropout)
+        self.residual_dropout_ff = nn.Dropout(p=dropout)
 
         if batch_norm:
             self.batch_norm_1 = nn.BatchNorm1d(out_dim)
@@ -283,9 +292,10 @@ class GTA3Layer(nn.Module):
 
         # apply the O matrix
         h = self.O(h)
-        
+
         # residual & normalization
         if self.residual_heads:
+            h = self.residual_dropout_sa(h)
             h = h_in + h
 
         if self.batch_norm:
@@ -296,16 +306,15 @@ class GTA3Layer(nn.Module):
             h = self.layer_norm_1(h)
         
         # feed forward network
-        h = self.dropout_pre_ff(h)
         h_tmp = h  # yes, first dropout is before residual connection
         h = self.FFN_layer_1(h)
         h = F.relu(h)
         h = self.dropout_ff(h)
         h = self.FFN_layer_2(h)
-        h = self.dropout_post_ff(h)
 
         # residual & normalization
         if self.residual_ffn:
+            h = self.residual_dropout_ff(h)
             h = h_tmp + h
 
         if self.batch_norm:
