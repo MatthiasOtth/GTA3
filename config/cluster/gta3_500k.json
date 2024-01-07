@@ -24,16 +24,16 @@
     },
     "train_params": {
         "lr": 1e-3,
-        "lr_alpha": 1e-2,
+        "lr_alpha": 1e-1,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
         "batch_size": 64,
         "lr_reduce_factor": 0.5,
-        "lr_schedule_patience": 5
+        "lr_schedule_patience": 20
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_gta3_500k_sota_bench_defaults_lralpha1e-2"
+        "name": "cluster_gta3_500k_sota_patience20"
     }
 }
