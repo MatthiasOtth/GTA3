@@ -27,13 +27,13 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
 
         # generate the data
         generator = TreeDataset(self.depth, self.generator_seed)
-        train_data, valid_data, test_data, num_types, num_tree_nodes = generator.generate_data(train_size=0.8, valid_size=0.5) # -> split into 80% train, 10% valid, 10% test
+        train_data, valid_data, test_data, num_types, num_leaf_nodes = generator.generate_data(train_size=0.8, valid_size=0.5) # -> split into 80% train, 10% valid, 10% test
 
         # save the data
         save_graphs(osp.join(self.raw_path, "train_data.bin"), [g for g, _ in train_data], {'labels': torch.tensor([[l] for _, l in train_data], dtype=torch.long)})
         save_graphs(osp.join(self.raw_path, "valid_data.bin"), [g for g, _ in valid_data], {'labels': torch.tensor([[l] for _, l in valid_data], dtype=torch.long)})
         save_graphs(osp.join(self.raw_path, "test_data.bin"), [g for g, _ in test_data], {'labels': torch.tensor([[l] for _, l in test_data], dtype=torch.long)})
-        save_info(osp.join(self.raw_path, "meta.pkl"), {"num_types": num_types, "num_tree_nodes": num_tree_nodes})
+        save_info(osp.join(self.raw_path, "meta.pkl"), {"num_types": num_types, "num_leaf_nodes": num_leaf_nodes})
 
 
     def _load_raw_data(self, data_path, info_path):
@@ -50,7 +50,7 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
         self.labels = labels_dict['labels']
         meta_dict = load_info(osp.join(self.raw_path, "meta.pkl"))
         self.num_types = meta_dict['num_types']
-        self.num_tree_nodes = meta_dict['num_tree_nodes']
+        self.num_leaf_nodes = meta_dict['num_leaf_nodes']
         print(f"Loading the raw NeighborsMatch {self.mode} data.......Done")
 
         # preprocess data
@@ -58,11 +58,16 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
         self._preprocess_data()
         print(f"Preprocessing the {self.mode} data..........Done" + ' '*15)
 
+        # get maximum number of nodes
+        self.max_nodes = 0
+        for g in self.graphs:
+            self.max_nodes = max(self.max_nodes, g.num_nodes())
+
         # store the preprocessed data
         print(f"Caching the preprocessed {self.mode} data...", end='\r')
         save_graphs(data_path, transform_to_graph_list(self.graphs), {"labels": self.labels})
-        if self.compute_class_weights: save_info(info_path, {'num_types': self.num_types, 'num_tree_nodes': self.num_tree_nodes, 'class_weights': self.class_weights})
-        else:                          save_info(info_path, {'num_types': self.num_types, 'num_tree_nodes': self.num_tree_nodes})
+        if self.compute_class_weights: save_info(info_path, {'num_types': self.num_types, 'num_leaf_nodes': self.num_leaf_nodes, 'max_nodes': self.max_nodes, 'class_weights': self.class_weights})
+        else:                          save_info(info_path, {'num_types': self.num_types, 'num_leaf_nodes': self.num_leaf_nodes, 'max_nodes': self.max_nodes})
         print(f"Caching the preprocessed {self.mode} data...Done")
 
 
@@ -72,7 +77,8 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
         self.labels = labels_dict['labels']
         info = load_info(info_path)
         self.num_types = info['num_types']
-        self.num_tree_nodes = info['num_tree_nodes']
+        self.num_leaf_nodes = info['num_leaf_nodes']
+        self.max_nodes = info['max_nodes']
         self.class_weights = info['class_weights'] if self.compute_class_weights else None
         print(f"Loading cached NeighborsMatch {self.mode} data...Done")
 
@@ -86,11 +92,11 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
     
 
     def get_num_out_types(self):
-        return self.num_tree_nodes
+        return self.num_leaf_nodes
     
 
     def max_num_nodes(self):
-        return self.graphs[0].num_nodes() # each graph should be equally big
+        return self.max_nodes
     
 
 
@@ -106,7 +112,8 @@ class GTA3_NBM(GTA3BaseModel):
 
         # need two embeddings: one for the keys and one for the values
         # -> one is already created in the base model
-        self.embedding1 = nn.Embedding(model_params['num_in_types'], model_params['hidden_dim']) # TODO
+        self.key_embedding = nn.Embedding(model_params['num_out_types'] + 1, model_params['hidden_dim']) # TODO
+
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
         
@@ -125,11 +132,10 @@ class GTA3_NBM(GTA3BaseModel):
         self.alpha = self.alpha.to(device=self.device)
 
         # create embeddings
-        # h = self.embedding(x)
-        x_key, x_type = x[..., 0], x[..., 1]
-        h_key = self.embedding(x_key)
-        h_type = self.embedding1(x_type)
-        h = h_key + h_type
+        x_type, x_key = x[..., 0], x[..., 1]
+        h_type = self.embedding(x_type)
+        h_key = self.key_embedding(x_key)
+        h = h_type + h_key
 
         # add positional embeddings
         if self.use_pos_enc:
@@ -178,11 +184,6 @@ class GTA3_NBM(GTA3BaseModel):
     def validation_step(self, batch, batch_idx):
         lengths, x, A, pos_enc, labels = batch
         batch_size = 1 if len(labels.shape) == 1 else labels.size(0)
-
-        # print(x)
-        # print(A)
-        # print(labels)
-        # exit()
 
         # forward pass
         preds = self.forward_step(x, A, pos_enc, lengths)
