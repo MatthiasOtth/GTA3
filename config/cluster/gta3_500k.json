@@ -23,7 +23,7 @@
         "attention_bias": true
     },
     "train_params": {
-        "lr": 1e-3,
+        "lr": 5e-4,
         "lr_alpha": 1e-1,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_gta3_500k_sota_patience20"
+        "name": "cluster_gta3_500k_sota_patience20_lr5e-4"
     }
 }
