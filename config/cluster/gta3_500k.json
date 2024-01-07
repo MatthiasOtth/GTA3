@@ -2,16 +2,21 @@
     "model": "gta3",
     "dataset": "cluster",
     "model_params": {
-        "hidden_dim": 64,
-        "out_dim": 64,
-        "phi": "inverse_hops",
+        "hidden_dim": 56,
+        "out_dim": 128,
+        "phi": "alpha_pow_dist_sigmoid",
         "alpha": "per_layer",
-        "alpha_init": 1,
+        "alpha_init": 0.0,
+        "alpha_init_kwargs": {
+            "lb": -10.0,
+            "ub": 10.0
+        },
         "alpha_weight": 0,
-        "num_heads": 4,
-        "num_layers": 6,
-        "pos_encoding": "wl",
+        "num_heads": 8,
+        "num_layers": 16,
+        "pos_encoding": "none",
         "pos_enc_dim": 8,
+        "dropout": 0.1,
         "residual": true,
         "batch_norm": false,
         "layer_norm": true,
@@ -19,16 +24,16 @@
     },
     "train_params": {
         "lr": 1e-3,
+        "lr_alpha": 1e-1,
         "weight_decay": 0.0,
-        "max_epochs": 100,
+        "lr_threshold": 1e-5,
         "seed": 0,
         "batch_size": 64,
         "lr_reduce_factor": 0.5,
-        "lr_schedule_patience": 5,
-        "lr_threshold": 1e-5
+        "lr_schedule_patience": 5
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_gta3"
+        "name": "cluster_gta3_500k_sota_bench_defaults"
     }
 }

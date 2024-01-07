@@ -30,10 +30,10 @@
         "seed": 0,
         "batch_size": 128,
         "lr_reduce_factor": 0.5,
-        "lr_schedule_patience": 5
+        "lr_schedule_patience": 20
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500kmatthias_sota_lr1e-3_init-experiment"
+        "name": "zinc_gta3_500kmatthias_sota_patience20"
     }
 }
