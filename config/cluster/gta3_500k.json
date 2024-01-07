@@ -24,7 +24,7 @@
     },
     "train_params": {
         "lr": 1e-3,
-        "lr_alpha": 1e-1,
+        "lr_alpha": 1e-2,
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_gta3_500k_sota_bench_defaults"
+        "name": "cluster_gta3_500k_sota_bench_defaults_lralpha1e-2"
     }
 }

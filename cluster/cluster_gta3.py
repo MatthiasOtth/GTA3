@@ -133,7 +133,14 @@ class GTA3_CLUSTER(GTA3BaseModel):
             self.log("alpha/alpha_0", self.alpha, on_epoch=False, on_step=True, batch_size=batch_size)
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
 
-        self.log("lr", self.trainer.optimizers[0].param_groups[0]['lr'], on_epoch=False, on_step=True, batch_size=batch_size)
+        for io, opt in enumerate(self.trainer.optimizers):
+            prefix = f"optim_{io}_" if len(self.trainer.optimizers) > 1 else ""
+            for i, param_group in enumerate(opt.param_groups):
+                if 'lr' in param_group:
+                    self.log(
+                        "lr/" + prefix + f"group_{i}_lr", param_group['lr'], 
+                        on_epoch=True, on_step=False, batch_size=1
+                    )
 
         return train_loss
     
