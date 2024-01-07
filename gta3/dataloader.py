@@ -253,7 +253,7 @@ class GTA3BaseDataset(Dataset):
 
         # pad graphs
         print(f"Creating batches (0/{self.num_graphs})..." + ' '*15, end="\r")
-        self.num_batches = (self.num_graphs + 1) // self.batch_size
+        self.num_batches = ((self.num_graphs - 1) // self.batch_size) + 1
         self.batches = list()
 
         for batch_idx in range(self.num_batches):
