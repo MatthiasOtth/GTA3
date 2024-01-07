@@ -1,5 +1,6 @@
 import torch
 import lightning as L
+from lightning.pytorch.plugins.environments import SLURMEnvironment
 from pytorch_lightning.loggers import WandbLogger
 import json
 import os.path as osp
@@ -77,6 +78,7 @@ def main():
         logger=logger,
         check_val_every_n_epoch=1,  # needed for lr scheduler
         callbacks=[StopOnLrCallback(lr_threshold=config['train_params']['lr_threshold'], on_val=True)],
+        plugins=[SLURMEnvironment(auto_requeue=False)],
     )
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
