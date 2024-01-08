@@ -3,6 +3,7 @@ import lightning as L
 from lightning.pytorch.plugins.environments import SLURMEnvironment
 from pytorch_lightning.loggers import WandbLogger
 import json
+import os
 import os.path as osp
 import argparse
 
@@ -77,6 +78,7 @@ def main():
 
     # train the model
     if not args.no_wandb:
+        os.makedirs(config['logging']['save_dir'], exist_ok=True)
         logger = WandbLogger(entity='gta3', project='gta3', name=config['logging']['name'], save_dir=config['logging']['save_dir'], log_model=True,)
         logger.log_hyperparams(config)
     else:
