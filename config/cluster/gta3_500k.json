@@ -11,7 +11,7 @@
             "lb": -10.0,
             "ub": 10.0
         },
-        "alpha_weight": 1e-1,
+        "alpha_weight": 1e-2,
         "num_heads": 8,
         "num_layers": 16,
         "pos_encoding": "none",
@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_gta3_500k_lr5e-4_reg0.1_test"
+        "name": "cluster_gta3_500k_lr=5e-4_reg=1e-2_test"
     }
 }
