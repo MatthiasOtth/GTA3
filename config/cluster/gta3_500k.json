@@ -4,14 +4,14 @@
     "model_params": {
         "hidden_dim": 56,
         "out_dim": 128,
-        "phi": "alpha_pow_dist_sigmoid_softmax",
+        "phi": "alpha_pow_dist_sigmoid",
         "alpha": "per_layer",
         "alpha_init": 0.0,
         "alpha_init_kwargs": {
             "lb": -10.0,
             "ub": 10.0
         },
-        "alpha_weight": 0,
+        "alpha_weight": 1e-1,
         "num_heads": 8,
         "num_layers": 16,
         "pos_encoding": "none",
@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_gta3_500k_apdsoftmax_lr5e-4"
+        "name": "cluster_gta3_500k_lr5e-4_reg0.1_test"
     }
 }

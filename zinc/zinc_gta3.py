@@ -6,7 +6,7 @@ from dgl.data.utils import save_info, load_info
 
 from gta3.model import GTA3BaseModel
 from gta3.dataloader import GTA3BaseDataset
-from gta3.loss import L1Loss_L1Alpha, L1Loss_L2Alpha
+from gta3.loss import AlphaRegularizationWrapper
 
 from common.mlp_readout import MLPReadout
 
@@ -70,14 +70,8 @@ class GTA3_ZINC(GTA3BaseModel):
         # final mlp to map the out dimension to a single value
         self.out_mlp = MLPReadout(model_params['out_dim'], 1)
         
-        # loss functions
-        if model_params['alpha'] == 'fixed':
-            self.train_alpha = False
-            self.train_loss_func = nn.L1Loss()
-        else:
-            self.train_alpha = True
-            self.train_loss_func = L1Loss_L1Alpha
-            self.alpha_weight = model_params['alpha_weight']
+        # loss function
+        self.train_loss_func = AlphaRegularizationWrapper(nn.L1Loss(), model_params['alpha_weight'])
         self.valid_loss_func = nn.L1Loss()
 
 
@@ -121,10 +115,10 @@ class GTA3_ZINC(GTA3BaseModel):
         y_pred = self.forward_step(x, A, pos_enc, lengths)
 
         # compute loss
-        if self.train_alpha:
-            train_loss = self.train_loss_func(y_pred, y_true, self.alpha, self.alpha_weight) # NOTE: might not yet work for per head alpha
+        if isinstance(self.alpha, nn.Parameter):
+            train_loss = self.train_loss_func(y_pred, y_true, alpha=self.alpha)
         else:
-            train_loss = self.train_loss_func(y_pred, y_true)
+            train_loss = self.train_loss_func(y_pred, y_true, alpha=None)
 
         # log loss and alpha
         if self.per_layer_alpha:
@@ -153,9 +147,14 @@ class GTA3_ZINC(GTA3BaseModel):
         y_pred = self.forward_step(x, A, pos_enc, lengths)
 
         # compute loss
+        if isinstance(self.alpha, nn.Parameter):
+            valid_train_loss = self.valid_loss_func(y_pred, y_true, alpha=self.alpha)
+        else:
+            valid_train_loss = self.valid_loss_func(y_pred, y_true, alpha=None)
         valid_loss = self.valid_loss_func(y_pred, y_true)
 
         # log loss
+        self.log("valid_train_loss", valid_train_loss, on_epoch=True, on_step=False, batch_size=1)
         self.log(self.score_name, valid_loss, on_epoch=True, on_step=False, batch_size=1, prog_bar=True)
 
         return valid_loss

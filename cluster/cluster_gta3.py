@@ -8,6 +8,7 @@ from dgl.data.utils import save_info, load_info
 
 from gta3.model import GTA3BaseModel
 from gta3.dataloader import GTA3BaseDataset, transform_to_graph_list
+from gta3.loss import AlphaRegularizationWrapper
 from common.mlp_readout import MLPReadout
 
 
@@ -77,7 +78,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
         self.out_mlp = MLPReadout(model_params['out_dim'], model_params['num_out_types'])
         
         # loss functions
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = AlphaRegularizationWrapper(nn.CrossEntropyLoss(), model_params['alpha_weight'])
 
 
     def forward_step(self, x, A, pos_enc, lengths):
@@ -123,7 +124,11 @@ class GTA3_CLUSTER(GTA3BaseModel):
             preds = einops.rearrange(preds, 'b n d -> (b n) d')
             labels = einops.rearrange(labels, 'b l -> (b l)')
         self.criterion.weight = class_weights
-        train_loss = self.criterion(preds, labels.long())
+        
+        if isinstance(self.alpha, nn.Parameter):
+            train_loss = self.criterion(preds, labels.long(), self.alpha)
+        else:
+            train_loss = self.criterion(preds, labels.long())
 
         # log loss and alpha
         if self.per_layer_alpha:
@@ -158,7 +163,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
         accuracy = (preds == labels).sum().float() / total
 
         # log accuracy
-        self.log(self.score_name, accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+        self.log(self.score_name, accuracy, on_epoch=True, on_step=False, batch_size=batch_size, prog_bar=True)
 
         return accuracy
 
