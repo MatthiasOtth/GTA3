@@ -6,12 +6,12 @@
         "out_dim": 128,
         "phi": "alpha_pow_dist_sigmoid",
         "alpha": "per_layer",
-        "alpha_init": 10.0,
+        "alpha_init": 0.0,
         "alpha_init_kwargs": {
             "lb": -10.0,
             "ub": 10.0
         },
-        "alpha_weight": 1e-3,
+        "alpha_weight": 1e-4,
         "num_heads": 8,
         "num_layers": 16,
         "pos_encoding": "none",
@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_gta3_500k_lr=5e-4_reg=1e-3_init=10_test"
+        "name": "cluster_gta3_500k_lr=5e-4_reg=1e-4_test"
     }
 }
