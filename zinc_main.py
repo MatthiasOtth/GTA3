@@ -1,6 +1,6 @@
 import torch
 import lightning as L
-from pytorch_lightning.plugins.environments import SLURMEnvironment
+from lightning.pytorch.plugins.environments import SLURMEnvironment
 from pytorch_lightning.loggers import WandbLogger
 import json
 import os
