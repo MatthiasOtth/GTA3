@@ -148,9 +148,9 @@ class GTA3_ZINC(GTA3BaseModel):
 
         # compute loss
         if isinstance(self.alpha, nn.Parameter):
-            valid_train_loss = self.valid_loss_func(y_pred, y_true, alpha=self.alpha)
+            valid_train_loss = self.train_loss_func(y_pred, y_true, alpha=self.alpha)
         else:
-            valid_train_loss = self.valid_loss_func(y_pred, y_true, alpha=None)
+            valid_train_loss = self.train_loss_func(y_pred, y_true, alpha=None)
         valid_loss = self.valid_loss_func(y_pred, y_true)
 
         # log loss
