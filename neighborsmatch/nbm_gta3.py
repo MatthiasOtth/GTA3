@@ -105,8 +105,8 @@ class GTA3_NBM(GTA3BaseModel):
     def __init__(self, model_params, train_params):    
 
         # setup score name and direction for lr scheduler
-        self.score_name = "valid_accuracy"
-        self.score_direction = "max"
+        self.score_name = "train_loss"
+        self.score_direction = "min"
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 

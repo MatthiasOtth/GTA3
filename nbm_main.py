@@ -10,7 +10,7 @@ import argparse
 from neighborsmatch.nbm_gta3 import GTA3_NBM, GTA3_NBM_Dataset
 from neighborsmatch.nbm_gnn import GNN_NBM, GNN_NBM_DataLoader
 
-from util.lightning_util import StopOnLrCallback
+from util.lightning_util import StopOnLrCallback, StopOnValAcc
 
 def main():
     # arguments
@@ -88,7 +88,7 @@ def main():
         max_time='00:12:00:00',
         logger=logger, 
         check_val_every_n_epoch=1,  # needed for lr scheduler
-        callbacks=[StopOnLrCallback(lr_threshold=config['train_params']['lr_threshold'], on_val=True)],
+        callbacks=[StopOnLrCallback(lr_threshold=config['train_params']['lr_threshold'], on_val=True), StopOnValAcc(acc_thresh=1.0, on_val=True)],
         plugins=[SLURMEnvironment(auto_requeue=False)],
     )
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
