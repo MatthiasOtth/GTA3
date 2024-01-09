@@ -117,14 +117,14 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         self.K = nn.Linear(in_dim, out_dim * num_heads, bias=bias)
         self.V = nn.Linear(in_dim, out_dim * num_heads, bias=bias)
 
-        # use common initialization attention
-        nn.init.normal_(self.Q.weight, std=0.02)
-        nn.init.normal_(self.K.weight, std=0.02)
-        nn.init.normal_(self.V.weight, std=0.02)
-        if bias:
-            nn.init.zeros_(self.Q.bias)
-            nn.init.zeros_(self.K.bias)
-            nn.init.zeros_(self.V.bias)
+        # # use common initialization attention
+        # nn.init.normal_(self.Q.weight, std=0.02)
+        # nn.init.normal_(self.K.weight, std=0.02)
+        # nn.init.normal_(self.V.weight, std=0.02)
+        # if bias:
+        #     nn.init.zeros_(self.Q.bias)
+        #     nn.init.zeros_(self.K.bias)
+        #     nn.init.zeros_(self.V.bias)
 
         self.softmax = nn.Softmax(dim=-1)
         self.phi = phi
@@ -254,10 +254,10 @@ class GTA3Layer(nn.Module):
         else:
             raise NotImplementedError(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
 
-        # use common initialization attention
         self.O = nn.Linear(out_dim, out_dim)
-        torch.nn.init.normal_(self.O.weight, std=0.02)
-        torch.nn.init.zeros_(self.O.bias)
+        # # use common initialization attention
+        # torch.nn.init.normal_(self.O.weight, std=0.02)
+        # torch.nn.init.zeros_(self.O.bias)
 
         self.aa_attention = AdjacencyAwareMultiHeadAttention(
             in_dim=in_dim,
