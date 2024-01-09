@@ -21,6 +21,7 @@ def main():
 		                help="Will force the dataloader to reload the raw data and preprocess it instead of using cached data.")
     parser.add_argument('--no_wandb', action="store_true",
 		                help="Will not use the WandB logger (useful for debugging).")
+    parser.add_argument('--seed', type=int, default=None, help="Manually set the seed for the run.")
     args = parser.parse_args()
 
     # load the config
@@ -32,6 +33,10 @@ def main():
         config = json.load(config_file)
     if config['dataset'] != 'cluster':
         raise ValueError(f"Config is for the wrong dataset! Expecting 'cluster', got {config['dataset']}!")
+
+    # override the seed if we are using one
+    if args.seed is not None:
+        config['train_params']['seed'] = args.seed
 
     # set the seed if we are using one
     if config['train_params']['seed'] is not None:
