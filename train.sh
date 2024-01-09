@@ -4,7 +4,7 @@
 #SBATCH --job=gta3
 #SBATCH --gpus=1  # max
 #SBATCH --cpus-per-task=2  # max=2
-#SBATCH --time=4:00:00
+#SBATCH --time=24:00:00
 #SBATCH --mem-per-cpu=8G
 #SBATCH --tmp=8G
 #SBATCH --output=/home/%u/GTA3/logs/euler/%j.out
