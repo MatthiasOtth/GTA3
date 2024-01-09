@@ -38,7 +38,7 @@ def main():
     # set the seed if we are using one
     if config['train_params']['seed'] is not None:
         print(f"Setting manual seed to {config['train_params']['seed']}.")
-        torch.manual_seed(config['train_params']['seed'])
+        L.seed_everything(config['train_params']['seed'])
     torch.set_float32_matmul_precision('medium')
 
     # load the training data
@@ -84,7 +84,8 @@ def main():
     else:
         logger = None
     trainer = L.Trainer(
-        max_epochs=config['train_params']['max_epochs'], 
+        #max_epochs=config['train_params']['max_epochs'], 
+        max_time='00:12:00:00',
         logger=logger, 
         check_val_every_n_epoch=1,  # needed for lr scheduler
         callbacks=[StopOnLrCallback(lr_threshold=config['train_params']['lr_threshold'], on_val=True)],
