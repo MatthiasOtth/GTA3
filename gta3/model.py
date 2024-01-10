@@ -183,9 +183,9 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
 
         # make half the heads local
         if self.local_global:
-            m = A.unsqueeze(1).expand(-1, attention.size(1), -1, -1).transpose(-1, -2)
-            m[:, attention.size(1) // 2:] = 1
-            attention = attention.masked_fill(m != 1, -torch.inf)
+            m = A.unsqueeze(1).expand(-1, attention.size(1), -1, -1).transpose(-1, -2) != 1
+            m[:, attention.size(1)//2:] = False
+            attention = attention.masked_fill(m, -torch.inf)
 
         # apply scaling and softmax to attention
         attention = self.softmax(attention / self.sqrt_out_dim)
