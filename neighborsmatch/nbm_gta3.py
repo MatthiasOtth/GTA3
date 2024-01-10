@@ -105,14 +105,15 @@ class GTA3_NBM(GTA3BaseModel):
     def __init__(self, model_params, train_params):    
 
         # setup score name and direction for lr scheduler
-        self.score_name = "valid_accuracy"
-        self.score_direction = "max"
+        self.score_name = "train_loss"
+        self.score_direction = "min"
         # initialize the GTA3 base model
         super().__init__(model_params, train_params)
 
         # need two embeddings: one for the keys and one for the values
         # -> one is already created in the base model
         self.key_embedding = nn.Embedding(model_params['num_out_types'] + 1, model_params['hidden_dim']) # TODO
+        self.embedding_contractor = nn.Linear(model_params['hidden_dim'] * 2, model_params['hidden_dim'])
 
         # final mlp to map the out dimension to a single value
         self.out_mlp = nn.Sequential(nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), nn.ReLU(), nn.Dropout(), nn.Linear(model_params['out_dim'] * 2, model_params['num_out_types']))
@@ -135,7 +136,9 @@ class GTA3_NBM(GTA3BaseModel):
         x_type, x_key = x[..., 0], x[..., 1]
         h_type = self.embedding(x_type)
         h_key = self.key_embedding(x_key)
-        h = h_type + h_key
+        h = torch.concat((h_type, h_key), dim=-1)
+        h = self.embedding_contractor(h)
+        #h = h_type + h_key
 
         # add positional embeddings
         if self.use_pos_enc:

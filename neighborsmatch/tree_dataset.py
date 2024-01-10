@@ -33,7 +33,7 @@ class TreeDataset():
     def _create_base_tree(self):
         num_nodes = self._num_tree_nodes()
         num_leaf_nodes = self._num_leaf_nodes()
-        nodes = [[0,0]] * (num_nodes - num_leaf_nodes) + [[i,0] for i in range(2,num_leaf_nodes+2)]
+        nodes = [[2,0]] + [[0,0]] * (num_nodes - num_leaf_nodes - 1) + [[i,0] for i in range(3,num_leaf_nodes+3)]
         # nodes = [[0,0]]
         # for i in range(1, self.depth):
         #     nodes += [[i,0] for _ in range(2 ** i)]
@@ -49,7 +49,12 @@ class TreeDataset():
 
 
     def _add_neighbors(self, num_nodes, nodes, edges, root_neighbors, leaf_neighbors):
-        nodes[0][1] = root_neighbors
+        # nodes[0][1] = root_neighbors
+        edges.append((num_nodes, 0))
+        if not self.directed:
+            edges.append((0, num_nodes))
+        nodes += [[1,root_neighbors]]
+        num_nodes += 1
 
         leaf_base_idx = (2 ** self.depth) - 1
         for i in range(2 ** self.depth):
@@ -62,7 +67,6 @@ class TreeDataset():
         # nodes += [[neighbor_type,i] for i in leaf_neighbors]
 
         return num_nodes, nodes, edges
-
 
     def generate_data(self, train_size=0.8, valid_size=0.5, max_leaf_perm=1000, max_perm_examples=1000, max_examples=64000):
         num_leaf_nodes = 2 ** self.depth
