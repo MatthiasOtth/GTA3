@@ -29,8 +29,8 @@ source .venv/bin/activate
 echo "python: $(which python3)"
 echo "python version: $(python3 --version)"
 
-srun python3 cluster_main.py config/cluster/gta3_500k_shallow.json
-srun python3 zinc_main.py config/zinc/gta3_500k_shallow.json
+srun python3 cluster_main.py config/cluster/gta3_500k.json
+srun python3 zinc_main.py config/zinc/gta3_500k.json
 
 cd --
 

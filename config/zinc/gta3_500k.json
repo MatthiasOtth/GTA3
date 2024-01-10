@@ -4,14 +4,14 @@
     "model_params": {
         "hidden_dim": 56,
         "out_dim": 128,
-        "phi": "alpha_pow_dist_sigmoid",
-        "alpha": "per_layer",
+        "phi": "identity",
+        "alpha": "fixed",
         "alpha_init": 0.0,
         "alpha_init_kwargs": {
             "lb": -10.0,
             "ub": 10.0
         },
-        "alpha_weight": 1e-3,
+        "alpha_weight": 0.0,
         "num_heads": 8,
         "num_layers": 16,
         "pos_encoding": "none",
@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500k_patience20_lr=5e-4_reg=1e-3"
+        "name": "zinc_gta3_500k_patience20_lr=5e-4_localglobalheads"
     }
 }
