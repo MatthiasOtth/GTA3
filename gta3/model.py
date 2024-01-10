@@ -200,7 +200,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         log_dict["attention/attention_pre_transform_d1"]  = attention[:,A_t==1].mean(), attention[:,A_t==1].reshape(-1).shape[0]
         log_dict["attention/attention_pre_transform_d2+"] = attention[:,A_t >1].mean(), attention[:,A_t >1].reshape(-1).shape[0]
 
-        attention = self.phi(attention, A_t, alpha)
+        # attention = self.phi(attention, A_t, alpha)
 
         log_dict["attention/attention_post_transform_d1"]  = attention[:,A_t==1].mean(), attention[:,A_t==1].reshape(-1).shape[0]
         log_dict["attention/attention_post_transform_d2+"] = attention[:,A_t >1].mean(), attention[:,A_t >1].reshape(-1).shape[0]
