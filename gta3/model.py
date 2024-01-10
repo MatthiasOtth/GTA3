@@ -110,7 +110,7 @@ def phi_khop(a, A, alpha):
 
 class AdjacencyAwareMultiHeadAttention(nn.Module):
 
-    def __init__(self, in_dim, out_dim, phi, num_heads=8, bias=True):
+    def __init__(self, in_dim, out_dim, phi, num_heads=8, bias=True, local_global=True):
         """
         Adjacency aware multi head attention layer.
 
@@ -141,6 +141,7 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
 
         self.softmax = nn.Softmax(dim=-1)
         self.phi = phi
+        self.local_global = local_global
 
 
     def forward(self, h, A, lengths, alpha):
@@ -179,6 +180,11 @@ class AdjacencyAwareMultiHeadAttention(nn.Module):
         mask.unsqueeze_(2)
         #Mask: [batch, 1, 1, nodes]
         attention = attention.masked_fill(mask, float('-inf'))
+
+        # make half the heads local
+        if self.local_global:
+            attention[:, :attention.size(1) // 2, A.transpose(-1, -2) != 1] = -torch.inf
+
         # apply scaling and softmax to attention
         attention = self.softmax(attention / self.sqrt_out_dim)
 
@@ -240,7 +246,7 @@ class GTA3Layer(nn.Module):
         self.residual_heads = residual and in_dim == out_dim
         self.residual_ffn = residual
 
-        if phi == 'none':
+        if phi == 'none' or phi == 'identity':
             self.phi = phi_no_weighting
         elif phi == 'local':
             self.phi = phi_local

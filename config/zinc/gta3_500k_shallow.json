@@ -4,8 +4,8 @@
     "model_params": {
         "hidden_dim": 120,
         "out_dim": 128,
-        "phi": "khop",
-        "alpha": "per_layer",
+        "phi": "identity",
+        "alpha": "fixed",
         "alpha_init": 4.0,
         "alpha_init_kwargs": {
             "lb": -10.0,
@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500k_patience20_lr=5e-4_khop_init=4_alphalr=1e-2"
+        "name": "zinc_gta3_500k_patience20_lr=5e-4_localglobalheads"
     }
 }

@@ -33,6 +33,7 @@ class GTA3BaseDataset(Dataset):
         elif (
             phi_func in 
                 [
+                    'identity',
                     'inverse_hops',
                     'inverse_hops_exp',
                     'alpha_pow_dist',
