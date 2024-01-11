@@ -19,6 +19,8 @@ def main():
 		                help="Path to the config file to be used.")
     parser.add_argument('--force_reload', action="store_true",
 		                help="Will force the dataloader to reload the raw data and preprocess it instead of using cached data.")
+    parser.add_argument('--disable_caching', action="store_false",
+		                help="Will make the dataloader not to cache the preprocessed data.")
     parser.add_argument('--no_wandb', action="store_true",
 		                help="Will not use the WandB logger (useful for debugging).")
     parser.add_argument('--seed', type=int, default=None, help="Manually set the seed for the run.")
@@ -48,11 +50,14 @@ def main():
     if config['model'] == 'gta3':
         pos_enc_dim = config['model_params']['pos_enc_dim'] if 'pos_enc_dim' in config['model_params'] else None
         train_loader = GTA3_ZINC_Dataset('train', phi_func=config['model_params']['phi'], pos_enc=config['model_params']['pos_encoding'],
-                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload,
+                                         use_caching=args.disable_caching, pos_enc_dim=pos_enc_dim)
         valid_loader = GTA3_ZINC_Dataset('valid', phi_func=config['model_params']['phi'], pos_enc=config['model_params']['pos_encoding'],
-                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload,
+                                         use_caching=args.disable_caching, pos_enc_dim=pos_enc_dim)
         test_loader  = GTA3_ZINC_Dataset('test', phi_func=config['model_params']['phi'], pos_enc=config['model_params']['pos_encoding'],
-                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+                                         batch_size=config['train_params']['batch_size'], force_reload=args.force_reload,
+                                         use_caching=args.disable_caching, pos_enc_dim=pos_enc_dim)
     elif config['model'] in ('gcn', 'gat'):
         train_loader = GNN_ZINC_DataLoader('train', batch_size=config['train_params']['batch_size'])
         valid_loader = GNN_ZINC_DataLoader('valid', batch_size=config['train_params']['batch_size'])

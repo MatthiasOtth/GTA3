@@ -13,14 +13,14 @@ from gta3.dataloader import GTA3BaseDataset, transform_to_graph_list
 
 class GTA3_NBM_Dataset(GTA3BaseDataset):
 
-    def __init__(self, mode, phi_func, pos_enc, tree_depth, batch_size=10, force_reload=False, force_regenerate=False, generator_seed=None, pos_enc_dim=8):
+    def __init__(self, mode, phi_func, pos_enc, tree_depth, batch_size=10, force_reload=False, force_regenerate=False, use_caching=True, generator_seed=None, pos_enc_dim=8):
         self.mode = mode
         self.depth = tree_depth
         self.generator_seed = generator_seed
         self.raw_path = osp.join(".", ".dgl", f"nbmraw_{self.depth}")
         self.force_regenerate = force_regenerate
 
-        super().__init__('nbm', mode, phi_func, pos_enc, batch_size=batch_size, force_reload=force_reload, pos_enc_dim=pos_enc_dim, path_suffix=f'_{self.depth}')
+        super().__init__('nbm', mode, phi_func, pos_enc, batch_size=batch_size, force_reload=force_reload, use_caching=use_caching, pos_enc_dim=pos_enc_dim, path_suffix=f'_{self.depth}')
 
 
     def _generate_data(self):
@@ -64,11 +64,12 @@ class GTA3_NBM_Dataset(GTA3BaseDataset):
             self.max_nodes = max(self.max_nodes, g.num_nodes())
 
         # store the preprocessed data
-        print(f"Caching the preprocessed {self.mode} data...", end='\r')
-        save_graphs(data_path, transform_to_graph_list(self.graphs), {"labels": self.labels})
-        if self.compute_class_weights: save_info(info_path, {'num_types': self.num_types, 'num_leaf_nodes': self.num_leaf_nodes, 'max_nodes': self.max_nodes, 'class_weights': self.class_weights})
-        else:                          save_info(info_path, {'num_types': self.num_types, 'num_leaf_nodes': self.num_leaf_nodes, 'max_nodes': self.max_nodes})
-        print(f"Caching the preprocessed {self.mode} data...Done")
+        if self.use_caching:
+            print(f"Caching the preprocessed {self.mode} data...", end='\r')
+            save_graphs(data_path, transform_to_graph_list(self.graphs), {"labels": self.labels})
+            if self.compute_class_weights: save_info(info_path, {'num_types': self.num_types, 'num_leaf_nodes': self.num_leaf_nodes, 'max_nodes': self.max_nodes, 'class_weights': self.class_weights})
+            else:                          save_info(info_path, {'num_types': self.num_types, 'num_leaf_nodes': self.num_leaf_nodes, 'max_nodes': self.max_nodes})
+            print(f"Caching the preprocessed {self.mode} data...Done")
 
 
     def _load_cached_data(self, data_path, info_path):
