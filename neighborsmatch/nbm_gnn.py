@@ -150,6 +150,7 @@ class GNN_NBM(GNNBaseModel):
 
         # log loss
         self.log("train_loss", train_loss, on_epoch=True, on_step=False, batch_size=batch_size)
+        self.log("lr", self.trainer.optimizers[0].param_groups[0]['lr'], on_epoch=False, on_step=True, batch_size=batch_size)
 
         return train_loss
 
@@ -168,5 +169,22 @@ class GNN_NBM(GNNBaseModel):
 
         # log accuracy
         self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+
+        return accuracy
+    
+    def test_step(self, batch, batch_idx):
+        g, labels = batch
+        batch_size = len(g.batch_num_nodes())
+
+        # forward pass
+        preds = self.forward_step(g)
+
+        # compute accuracy
+        total = labels.size(0)
+        preds = torch.argmax(preds, dim=-1)
+        accuracy = (preds == labels.squeeze(-1)).sum().float() / total
+
+        # log accuracy
+        self.log("test_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
 
         return accuracy
