@@ -2,18 +2,21 @@
     "model": "gcn",
     "dataset": "neighborsmatch",
     "model_params": {
-        "hidden_dim": 32,
-        "out_dim": 32,
-        "num_layers": 6,
+        "hidden_dim": 64,
+        "out_dim": 64,
+        "num_layers": 4,
         "residual": true,
-        "layer_norm": true
+        "layer_norm": false
     },
     "train_params": {
-        "lr": 1e-3,
-        "max_epochs": 100,
+        "lr": 1e-4,
         "seed": 0,
-        "batch_size": 64,
-        "tree_depth": 3
+        "weight_decay": 0.0,
+        "lr_reduce_factor": 0.5,
+        "lr_schedule_patience": 100,
+        "lr_threshold": 1e-5,
+        "batch_size": 2,
+        "tree_depth": 2
     },
     "logging": {
         "save_dir": "logs/nbm",
