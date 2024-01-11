@@ -15,7 +15,8 @@ def transform_to_graph_list(dataset):
 
 class GTA3BaseDataset(Dataset):
 
-    def __init__(self, name, mode, phi_func, pos_enc, batch_size=10, force_reload=False, pos_enc_dim=8, compute_class_weights=False, path_suffix=''):
+    def __init__(self, name, mode, phi_func, pos_enc, batch_size=10, force_reload=False, use_caching=True, pos_enc_dim=8, compute_class_weights=False, path_suffix=''):
+        self.use_caching = use_caching
         self.pos_enc_dim = pos_enc_dim
         self.compute_class_weights = compute_class_weights
         self.batch_size = batch_size

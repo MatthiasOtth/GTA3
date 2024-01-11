@@ -21,6 +21,8 @@ def main():
 		                help="Will force the dataloader to reload the raw data and preprocess it instead of using cached data.")
     parser.add_argument('--force_regenerate', action="store_true",
 		                help="Will force the dataloader to regenerate the raw data.")
+    parser.add_argument('--disable_caching', action="store_false",
+		                help="Will make the dataloader not to cache the preprocessed data.")
     parser.add_argument('--no_wandb', action="store_true",
 		                help="Will not use the WandB logger (useful for debugging).")
     args = parser.parse_args()
@@ -46,14 +48,14 @@ def main():
         pos_enc_dim = config['model_params']['pos_enc_dim'] if 'pos_enc_dim' in config['model_params'] else None
         train_loader = GTA3_NBM_Dataset('train', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'], 
                                         pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
-                                        force_reload=args.force_reload, force_regenerate=args.force_regenerate, 
+                                        force_reload=args.force_reload, force_regenerate=args.force_regenerate, use_caching=args.disable_caching,
                                         generator_seed=config['train_params']['seed'], pos_enc_dim=pos_enc_dim)
         valid_loader = GTA3_NBM_Dataset('valid', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'], 
                                         pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
-                                        force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+                                        force_reload=args.force_reload, use_caching=args.disable_caching, pos_enc_dim=pos_enc_dim)
         test_loader  = GTA3_NBM_Dataset('test', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'],
                                         pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
-                                        force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+                                        force_reload=args.force_reload, use_caching=args.disable_caching, pos_enc_dim=pos_enc_dim)
     elif config['model'] in ('gcn', 'gat'):
         train_loader = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
                                           force_regenerate=args.force_regenerate, generator_seed=config['train_params']['seed'])

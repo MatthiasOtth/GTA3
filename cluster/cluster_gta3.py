@@ -14,10 +14,10 @@ from common.mlp_readout import MLPReadout
 
 class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
 
-    def __init__(self, mode, phi_func, pos_enc, batch_size=10, force_reload=False, pos_enc_dim=8):
+    def __init__(self, mode, phi_func, pos_enc, batch_size=10, force_reload=False, use_caching=True, pos_enc_dim=8):
         self.mode = mode
         print(f"batch_size = {batch_size}")
-        super().__init__('cluster', mode, phi_func, pos_enc, batch_size=batch_size, force_reload=force_reload, pos_enc_dim=pos_enc_dim, compute_class_weights=True)
+        super().__init__('cluster', mode, phi_func, pos_enc, batch_size=batch_size, force_reload=force_reload, use_caching=use_caching, pos_enc_dim=pos_enc_dim, compute_class_weights=True)
 
 
     def _load_raw_data(self, data_path, info_path):
@@ -34,11 +34,12 @@ class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
         print(f"Preprocessing the {self.mode} data..........Done" + ' '*15)
 
         # store the preprocessed data
-        print(f"Caching the preprocessed {self.mode} data...", end='\r')
-        save_graphs(data_path, transform_to_graph_list(self.graphs))
-        if self.compute_class_weights: save_info(info_path, {'num_classes': self.num_classes, 'class_weights': self.class_weights})
-        else:                          save_info(info_path, {'num_classes': self.num_classes})
-        print(f"Caching the preprocessed {self.mode} data...Done")
+        if self.use_caching:
+            print(f"Caching the preprocessed {self.mode} data...", end='\r')
+            save_graphs(data_path, transform_to_graph_list(self.graphs))
+            if self.compute_class_weights: save_info(info_path, {'num_classes': self.num_classes, 'class_weights': self.class_weights})
+            else:                          save_info(info_path, {'num_classes': self.num_classes})
+            print(f"Caching the preprocessed {self.mode} data...Done")
 
 
     def _load_cached_data(self, data_path, info_path):
