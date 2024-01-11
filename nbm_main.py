@@ -59,9 +59,9 @@ def main():
     elif config['model'] in ('gcn', 'gat'):
         train_loader = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
                                           force_regenerate=args.force_regenerate, generator_seed=config['train_params']['seed'])
-        valid_loader = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
+        valid_loader = GNN_NBM_DataLoader('valid', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
                                           generator_seed=config['train_params']['seed'])
-        test_loader  = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'],
+        test_loader  = GNN_NBM_DataLoader('test', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'],
                                           generator_seed=config['train_params']['seed'])
     else:
         raise ValueError(f"Unkown model {config['model']} in config file {args.config}!")
