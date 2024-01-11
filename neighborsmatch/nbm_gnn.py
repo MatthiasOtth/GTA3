@@ -72,7 +72,7 @@ class GNN_NBM_DataLoader(GraphDataLoader):
 
 
 class GNN_NBM(GNNBaseModel):
-
+    
     def __init__(self, gnn_type, model_params, train_params):
 
         # initialize the GNN base model
@@ -83,6 +83,10 @@ class GNN_NBM(GNNBaseModel):
         self.key_embedding = nn.Embedding(model_params['num_out_types'] + 1, model_params['hidden_dim']) # TODO
         self.embedding_contractor = nn.Linear(model_params['hidden_dim'] * 2, model_params['hidden_dim'])
 
+        # set the score direction and name for lr scheduler
+        self.score_direction = 'min'
+        self.score_name = 'train_loss'
+        
         # final readout mlp
         self.out_mlp = nn.Sequential(
             nn.Linear(model_params['out_dim'], model_params['out_dim'] * 2), 

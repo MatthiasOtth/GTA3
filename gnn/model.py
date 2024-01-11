@@ -6,7 +6,8 @@ import lightning as L
 
 
 class GNNBaseModel(L.LightningModule):
-
+    score_direction = None
+    score_name = None
     def __init__(self, gnn_type, model_params, train_params):
         """
         Graph Neural Network (GNN) base model.
@@ -65,5 +66,21 @@ class GNNBaseModel(L.LightningModule):
 
         
     def configure_optimizers(self):
+        if not hasattr(self, "score_direction") or self.score_direction is None:
+            raise NotImplementedError("GNNBaseModel: Define score_direction attribute! (min|max)")
+        if not hasattr(self, "score_name") or self.score_name is None:
+            raise NotImplementedError("GNNBaseModel: Define score_name attribute! (e.g. 'val_loss')")
         optimizer = optim.Adam(self.parameters(), lr=self.train_params['lr'])
-        return optimizer
+        print(f"Optimizer: {optimizer}")
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode=self.score_direction,
+            factor=self.train_params['lr_reduce_factor'],
+            patience=self.train_params['lr_schedule_patience'],
+            verbose=True
+        )
+        print(f"LR-Scheduler: {scheduler}")
+        return (
+            [optimizer],
+            [{'scheduler': scheduler, 'interval': 'epoch', 'monitor': self.score_name, 'strict': False}]
+        )
