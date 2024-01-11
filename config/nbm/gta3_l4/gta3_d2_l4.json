@@ -26,15 +26,15 @@
         "lr": 1e-4,
         "lr_alpha": 1e-2,
         "weight_decay": 0.0,
-        "seed": 0,
-        "batch_size": 64,
-        "tree_depth": 3,
+        "seed": 1,
+        "batch_size": 2,
+        "tree_depth": 2,
         "lr_reduce_factor": 0.5,
         "lr_schedule_patience": 100,
         "lr_threshold": 1e-5
     },
     "logging": {
         "save_dir": "logs/nbm",
-        "name": "nbm_d3_l4_initinc"
+        "name": "nbm_d2_l4_initinc"
     }
 }

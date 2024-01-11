@@ -26,7 +26,7 @@
         "lr": 1e-4,
         "lr_alpha": 1e-2,
         "weight_decay": 0.0,
-        "seed": 0,
+        "seed": 2,
         "batch_size": 256,
         "tree_depth": 5,
         "lr_reduce_factor": 0.5,
