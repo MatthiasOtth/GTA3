@@ -30,7 +30,7 @@ echo "python: $(which python3)"
 echo "python version: $(python3 --version)"
 
 #srun python3 zinc_main.py config/zinc/gta3_500k.json
-srun python3 nbm_main.py config/nbm/gta3_d2_l4.json --force_regenerate --force_reload
+srun python3 nbm_main.py config/nbm/gcn/gcn_d4.json --force_regenerate --force_reload
 
 cd --
 

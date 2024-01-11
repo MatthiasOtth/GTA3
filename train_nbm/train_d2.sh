@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -A deep_learning
+#SBATCH -A isl
 #SBATCH --job=gta3
 #SBATCH --gpus=1  # max
 #SBATCH --cpus-per-task=2  # max=2
@@ -30,7 +30,7 @@ echo "python: $(which python3)"
 echo "python version: $(python3 --version)"
 
 #srun python3 zinc_main.py config/zinc/gta3_500k.json
-srun python3 nbm_main.py config/nbm/gta3_d4_l4.json --force_regenerate --force_reload
+srun python3 nbm_main.py config/nbm/gcn/gcn_d2.json --force_regenerate --force_reload
 
 cd --
 
