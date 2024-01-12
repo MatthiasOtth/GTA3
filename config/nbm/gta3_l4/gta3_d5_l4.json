@@ -4,9 +4,9 @@
     "model_params": {
         "hidden_dim": 64,
         "out_dim": 64,
-        "phi": "alpha_pow_dist_sigmoid",
-        "alpha": "per_layer",
-        "alpha_init": "linear_inc",
+        "phi": "identity",
+        "alpha": "fixed",
+        "alpha_init": 0.0,
         "alpha_init_kwargs": {
             "lb": -15.0,
             "ub": 15.0
@@ -35,6 +35,6 @@
     },
     "logging": {
         "save_dir": "logs/nbm",
-        "name": "nbm_d5_l4_initinc"
+        "name": "nbm_d5_l4_lg"
     }
 }

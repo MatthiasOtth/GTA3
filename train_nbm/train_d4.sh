@@ -4,7 +4,7 @@
 #SBATCH --job=gta3
 #SBATCH --gpus=1  # max
 #SBATCH --cpus-per-task=2  # max=2
-#SBATCH --time=4:30:00
+#SBATCH --time=12:30:00
 #SBATCH --mem-per-cpu=8G
 #SBATCH --tmp=8G
 #SBATCH --output=/home/%u/GTA3/logs/euler/%j.out
@@ -30,7 +30,9 @@ echo "python: $(which python3)"
 echo "python version: $(python3 --version)"
 
 #srun python3 zinc_main.py config/zinc/gta3_500k.json
-srun python3 nbm_main.py config/nbm/gcn/gcn_d4.json --force_regenerate --force_reload
+srun python3 nbm_main.py config/nbm/gta3_l4/gta3_d4_l4.json --force_regenerate --force_reload --seed 0
+srun python3 nbm_main.py config/nbm/gta3_l4/gta3_d4_l4.json --force_regenerate --force_reload --seed 1
+srun python3 nbm_main.py config/nbm/gta3_l4/gta3_d4_l4.json --force_regenerate --force_reload --seed 2
 
 cd --
 

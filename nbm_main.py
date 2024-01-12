@@ -25,6 +25,7 @@ def main():
 		                help="Will make the dataloader not to cache the preprocessed data.")
     parser.add_argument('--no_wandb', action="store_true",
 		                help="Will not use the WandB logger (useful for debugging).")
+    parser.add_argument('--seed', type=int, default=None, help='set manual seed')
     args = parser.parse_args()
 
     # load the config
@@ -36,6 +37,8 @@ def main():
         config = json.load(config_file)
     if config['dataset'] != 'neighborsmatch':
         raise ValueError(f"Config is for the wrong dataset! Expecting 'neighborsmatch', got {config['dataset']}!")
+    if args.seed is not None:
+        config['train_params']['seed'] = args.seed
 
     # set the seed if we are using one
     if config['train_params']['seed'] is not None:
@@ -81,7 +84,7 @@ def main():
     # train the model
     if not args.no_wandb:
         os.makedirs(config['logging']['save_dir'], exist_ok=True)
-        logger = WandbLogger(entity='gta3', project='gta3', name=config['logging']['name'], save_dir=config['logging']['save_dir'], log_model=True,)
+        logger = WandbLogger(entity='maotthteam', project='gta3', name=config['logging']['name'], save_dir=config['logging']['save_dir'], log_model=True,)
         logger.log_hyperparams(config)
     else:
         logger = None
