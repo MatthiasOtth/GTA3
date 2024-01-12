@@ -1,12 +1,13 @@
 {
-    "model": "gcn",
+    "model": "gat",
     "dataset": "neighborsmatch",
     "model_params": {
         "hidden_dim": 64,
         "out_dim": 64,
+        "num_heads": 4,
         "num_layers": 4,
         "residual": true,
-        "layer_norm": false
+        "layer_norm": true
     },
     "train_params": {
         "lr": 1e-4,
@@ -20,6 +21,6 @@
     },
     "logging": {
         "save_dir": "logs/nbm",
-        "name": "nbm_gcn"
+        "name": "nbm_gat_d2"
     }
 }

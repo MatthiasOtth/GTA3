@@ -1,0 +1,40 @@
+{
+    "model": "gta3",
+    "dataset": "neighborsmatch",
+    "model_params": {
+        "hidden_dim": 64,
+        "out_dim": 64,
+        "phi": "alpha_pow_dist_sigmoid",
+        "alpha": "per_layer",
+        "alpha_init": "linear_inc",
+        "alpha_init_kwargs": {
+            "lb": -15.0,
+            "ub": 15.0
+        },
+        "alpha_weight": 0,
+        "num_heads": 4,
+        "num_layers": 4,
+        "pos_encoding": "none",
+        "pos_enc_dim": 8,
+        "dropout": 0.1,
+        "residual": true,
+        "batch_norm": false,
+        "layer_norm": false,
+        "attention_bias": true
+    },
+    "train_params": {
+        "lr": 1e-4,
+        "lr_alpha": 1e-2,
+        "weight_decay": 0.0,
+        "seed": 1,
+        "batch_size": 2,
+        "tree_depth": 2,
+        "lr_reduce_factor": 0.5,
+        "lr_schedule_patience": 100,
+        "lr_threshold": 1e-5
+    },
+    "logging": {
+        "save_dir": "logs/nbm",
+        "name": "nbm_d2_l4_initinc"
+    }
+}

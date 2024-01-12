@@ -13,9 +13,9 @@ from common.mlp_readout import MLPReadout
 
 class GTA3_ZINC_Dataset(GTA3BaseDataset):
 
-    def __init__(self, mode, phi_func, pos_enc, batch_size=10, force_reload=False, pos_enc_dim=8):
+    def __init__(self, mode, phi_func, pos_enc, batch_size=10, force_reload=False, use_caching=True, pos_enc_dim=8):
         self.mode = mode
-        super().__init__('zinc', mode, phi_func, pos_enc, batch_size=batch_size, force_reload=force_reload, pos_enc_dim=pos_enc_dim)
+        super().__init__('zinc', mode, phi_func, pos_enc, batch_size=batch_size, force_reload=force_reload, use_caching=use_caching, pos_enc_dim=pos_enc_dim)
 
 
     def _load_raw_data(self, data_path, info_path):
@@ -34,10 +34,11 @@ class GTA3_ZINC_Dataset(GTA3BaseDataset):
         print(f"Preprocessing the {self.mode} data..........Done" + ' '*15)
 
         # store the preprocessed data
-        print(f"Caching the preprocessed {self.mode} data...", end='\r')
-        save_graphs(data_path, self.graphs, {'labels': self.labels})
-        save_info(info_path, {'num_atom_types': self.num_atom_types})
-        print(f"Caching the preprocessed {self.mode} data...Done")
+        if self.use_caching:
+            print(f"Caching the preprocessed {self.mode} data...", end='\r')
+            save_graphs(data_path, self.graphs, {'labels': self.labels})
+            save_info(info_path, {'num_atom_types': self.num_atom_types})
+            print(f"Caching the preprocessed {self.mode} data...Done")
 
 
     def _load_cached_data(self, data_path, info_path):

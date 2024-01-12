@@ -1,12 +1,13 @@
 {
-    "model": "gcn",
+    "model": "gat",
     "dataset": "neighborsmatch",
     "model_params": {
         "hidden_dim": 64,
         "out_dim": 64,
-        "num_layers": 4,
+        "num_heads": 4,
+        "num_layers": 5,
         "residual": true,
-        "layer_norm": false
+        "layer_norm": true
     },
     "train_params": {
         "lr": 1e-4,
@@ -15,11 +16,11 @@
         "lr_reduce_factor": 0.5,
         "lr_schedule_patience": 100,
         "lr_threshold": 1e-5,
-        "batch_size": 2,
-        "tree_depth": 2
+        "batch_size": 64,
+        "tree_depth": 3
     },
     "logging": {
         "save_dir": "logs/nbm",
-        "name": "nbm_gcn"
+        "name": "nbm_gat_d3"
     }
 }

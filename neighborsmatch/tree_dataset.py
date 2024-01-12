@@ -68,7 +68,7 @@ class TreeDataset():
 
         return num_nodes, nodes, edges
 
-    def generate_data(self, train_size=0.8, valid_size=0.5, max_leaf_perm=1000, max_perm_examples=1000, max_examples=64000):
+    def generate_data(self, train_size=0.8, valid_size=0.5, max_leaf_perm=1000, max_perm_examples=1000, max_examples=32000):
         num_leaf_nodes = 2 ** self.depth
 
         num_perm_examples = min(num_leaf_nodes, max_perm_examples)
@@ -121,5 +121,5 @@ class TreeDataset():
         valid_data, test_data = train_test_split(test_data, train_size=valid_size, shuffle=False)
 
         # return (train_data, valid_data, test_data, num_types, num_leaf_nodes)
-        return train_data, valid_data, test_data, self._num_leaf_nodes()+2, self._num_leaf_nodes()
+        return train_data, valid_data, test_data, self._num_leaf_nodes()+3, self._num_leaf_nodes()
         # return train_data, valid_data, test_data, self._num_leaf_nodes()+self.depth+1, self._num_leaf_nodes()

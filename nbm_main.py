@@ -21,6 +21,8 @@ def main():
 		                help="Will force the dataloader to reload the raw data and preprocess it instead of using cached data.")
     parser.add_argument('--force_regenerate', action="store_true",
 		                help="Will force the dataloader to regenerate the raw data.")
+    parser.add_argument('--disable_caching', action="store_false",
+		                help="Will make the dataloader not to cache the preprocessed data.")
     parser.add_argument('--no_wandb', action="store_true",
 		                help="Will not use the WandB logger (useful for debugging).")
     args = parser.parse_args()
@@ -46,20 +48,20 @@ def main():
         pos_enc_dim = config['model_params']['pos_enc_dim'] if 'pos_enc_dim' in config['model_params'] else None
         train_loader = GTA3_NBM_Dataset('train', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'], 
                                         pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
-                                        force_reload=args.force_reload, force_regenerate=args.force_regenerate, 
+                                        force_reload=args.force_reload, force_regenerate=args.force_regenerate, use_caching=args.disable_caching,
                                         generator_seed=config['train_params']['seed'], pos_enc_dim=pos_enc_dim)
         valid_loader = GTA3_NBM_Dataset('valid', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'], 
                                         pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
-                                        force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+                                        force_reload=args.force_reload, use_caching=args.disable_caching, pos_enc_dim=pos_enc_dim)
         test_loader  = GTA3_NBM_Dataset('test', phi_func=config['model_params']['phi'], tree_depth=config['train_params']['tree_depth'],
                                         pos_enc=config['model_params']['pos_encoding'], batch_size=config['train_params']['batch_size'], 
-                                        force_reload=args.force_reload, pos_enc_dim=pos_enc_dim)
+                                        force_reload=args.force_reload, use_caching=args.disable_caching, pos_enc_dim=pos_enc_dim)
     elif config['model'] in ('gcn', 'gat'):
         train_loader = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
                                           force_regenerate=args.force_regenerate, generator_seed=config['train_params']['seed'])
-        valid_loader = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
+        valid_loader = GNN_NBM_DataLoader('valid', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'], 
                                           generator_seed=config['train_params']['seed'])
-        test_loader  = GNN_NBM_DataLoader('train', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'],
+        test_loader  = GNN_NBM_DataLoader('test', tree_depth=config['train_params']['tree_depth'], batch_size=config['train_params']['batch_size'],
                                           generator_seed=config['train_params']['seed'])
     else:
         raise ValueError(f"Unkown model {config['model']} in config file {args.config}!")
@@ -85,7 +87,7 @@ def main():
         logger = None
     trainer = L.Trainer(
         #max_epochs=config['train_params']['max_epochs'], 
-        max_time='00:12:00:00',
+        max_time='00:04:00:00',
         logger=logger, 
         check_val_every_n_epoch=1,  # needed for lr scheduler
         callbacks=[StopOnLrCallback(lr_threshold=config['train_params']['lr_threshold'], on_val=True), StopOnValAcc(acc_thresh=1.0, on_val=True)],
