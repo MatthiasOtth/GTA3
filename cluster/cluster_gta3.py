@@ -163,7 +163,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
         accuracy = (preds == labels).sum().float() / total
 
         # log accuracy
-        self.log(self.score_name, accuracy, on_epoch=True, on_step=False, batch_size=batch_size, prog_bar=True)
+        self.log(self.score_name, accuracy, on_epoch=True, on_step=False, batch_size=total, prog_bar=True)
 
         return accuracy
 
@@ -181,7 +181,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
         accuracy = (preds == labels).sum().float() / total
 
         # log accuracy
-        self.log("test_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=batch_size)
+        self.log("test_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=total)
 
         return accuracy
     
