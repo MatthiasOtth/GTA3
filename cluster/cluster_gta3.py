@@ -70,7 +70,7 @@ class GTA3_CLUSTER(GTA3BaseModel):
     def __init__(self, model_params, train_params):
 
         # init score name and direction for lr scheduler
-        self.score_name = 'valid_accuracy'
+        self.score_name = "valid_accuracy_SBM"
         self.score_direction = 'max'
         
         # initialize the GTA3 base model
@@ -165,9 +165,9 @@ class GTA3_CLUSTER(GTA3BaseModel):
         accuracy = (label_preds == labels).sum().float() / total
 
         # log accuracy
-        self.log(self.score_name, accuracy, on_epoch=True, on_step=False, batch_size=total, prog_bar=True)
+        self.log("valid_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=total, prog_bar=True)
 
-        self.log("valid_accuracy_SBM", accuracy_SBM(preds.flatten(0, 1), labels.flatten(0, 1)), on_epoch=True, on_step=False, batch_size=1)
+        self.log(self.score_name, accuracy_SBM(preds.flatten(0, 1), labels.flatten(0, 1)), on_epoch=True, on_step=False, batch_size=1)
 
         return accuracy
 
