@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_fix_gta3_500k_lr=5e-4_localglobalheads"
+        "name": "cluster_accfix_gta3_500k_lr=5e-4_localglobalheads"
     }
 }
