@@ -11,6 +11,8 @@ from gta3.dataloader import GTA3BaseDataset, transform_to_graph_list
 from gta3.loss import AlphaRegularizationWrapper
 from common.mlp_readout import MLPReadout
 
+from cluster.metric import accuracy_SBM, accuracy_SBM_fixed
+
 
 class GTA3_CLUSTER_Dataset(GTA3BaseDataset):
 
@@ -159,11 +161,13 @@ class GTA3_CLUSTER(GTA3BaseModel):
 
         # compute accuracy
         total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)
-        preds = torch.argmax(preds, dim=-1)
-        accuracy = (preds == labels).sum().float() / total
+        label_preds = torch.argmax(preds, dim=-1)
+        accuracy = (label_preds == labels).sum().float() / total
 
         # log accuracy
         self.log(self.score_name, accuracy, on_epoch=True, on_step=False, batch_size=total, prog_bar=True)
+
+        self.log("valid_accuracy_SBM", accuracy_SBM(preds.flatten(0, 1), labels.flatten(0, 1)), on_epoch=True, on_step=False, batch_size=1)
 
         return accuracy
 
@@ -177,11 +181,14 @@ class GTA3_CLUSTER(GTA3BaseModel):
 
         # compute accuracy
         total = labels.size(0) if batch_size == 1 else batch_size * labels.size(1)
-        preds = torch.argmax(preds, dim=-1)
-        accuracy = (preds == labels).sum().float() / total
+        label_preds = torch.argmax(preds, dim=-1)
+        accuracy = (label_preds == labels).sum().float() / total
 
         # log accuracy
         self.log("test_accuracy", accuracy, on_epoch=True, on_step=False, batch_size=total)
+        
+        self.log("test_accuracy_SBM", accuracy_SBM(preds.flatten(0, 1), labels.flatten(0, 1)), on_epoch=True, on_step=False, batch_size=1)
+        self.log("test_accuracy_SBM_fixed", accuracy_SBM_fixed(preds.flatten(0, 1), labels.flatten(0, 1)), on_epoch=True, on_step=False, batch_size=1)
 
         return accuracy
     
