@@ -89,5 +89,5 @@ Base implementation under `gta3/`. Dataset specific implementations under `zinc/
 
 ## Reproducability
 Use the flag --no_wandb to prevent WeightsAndBiasas from attempting to log data.
-For the NEIGHBORSMATCH dataset use the nbm_r_benchmark branch along with the configs in `config/nbm`
-
+For the NEIGHBORSMATCH dataset use the `nbm_r_benchmark` branch along with the configs in `config/nbm`
+For the CLUSTER and ZINC datasets use the `main` branch for the GTA3 model with learnable alpha and the `local-global` branch for the model with local and global heads.
