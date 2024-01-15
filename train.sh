@@ -29,10 +29,12 @@ source .venv/bin/activate
 echo "python: $(which python3)"
 echo "python version: $(python3 --version)"
 
+srun python3 zinc_main.py config/zinc/gta3_500k.json --seed 0
 srun python3 cluster_main.py config/cluster/gta3_500k.json --seed 0
+srun python3 zinc_main.py config/zinc/gta3_500k.json --seed 1
 srun python3 cluster_main.py config/cluster/gta3_500k.json --seed 1
+srun python3 zinc_main.py config/zinc/gta3_500k.json --seed 2
 srun python3 cluster_main.py config/cluster/gta3_500k.json --seed 2
-srun python3 cluster_main.py config/cluster/gta3_500k.json --seed 3
 
 cd --
 
