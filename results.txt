@@ -1,0 +1,3 @@
+# model, cluster_test_acc, zinc_test_loss
+GTA3_16^0.5, 0.830 +- 0.001, 0.350 +- 0.007
+GTA3_16^GL, 0.838 +- 0.001, 0.395 +- 0.006

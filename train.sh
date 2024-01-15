@@ -4,7 +4,7 @@
 #SBATCH --job=gta3
 #SBATCH --gpus=1  # max
 #SBATCH --cpus-per-task=2  # max=2
-#SBATCH --time=24:00:00
+#SBATCH --time=13:00:00
 #SBATCH --mem-per-cpu=8G
 #SBATCH --tmp=8G
 #SBATCH --output=/home/%u/GTA3/logs/euler/%j.out
@@ -29,9 +29,10 @@ source .venv/bin/activate
 echo "python: $(which python3)"
 echo "python version: $(python3 --version)"
 
+srun python3 cluster_main.py config/cluster/gta3_500k.json --seed 0
+srun python3 zinc_main.py config/zinc/gta3_500k.json --seed 0
+srun python3 cluster_main.py config/cluster/gta3_500k.json --seed 1
 srun python3 zinc_main.py config/zinc/gta3_500k.json --seed 1
-srun python3 zinc_main.py config/zinc/gta3_500k.json --seed 2
-srun python3 zinc_main.py config/zinc/gta3_500k.json --seed 3
 
 cd --
 

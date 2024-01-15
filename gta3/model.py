@@ -94,6 +94,19 @@ def phi_sigmoid_shift(a, A, alpha):
     new_a = F.normalize(new_a, p=1, dim=-1)
     return new_a
 
+def phi_khop(a, A, alpha):
+    alpha = torch.clamp(alpha, min=0)
+    beta = 5
+    m = 2
+    scale = beta / ((m - 1) * alpha + 1)
+    offset = - alpha - ((m - 1) * alpha + 1) / 2
+    d = A - 1
+    w = 1 - torch.sigmoid(scale * (d + offset))
+    new_a = a * w
+    new_a = torch.where(A==0, torch.zeros_like(a), new_a)
+    new_a = F.normalize(new_a, p=1, dim=-1)
+    return new_a
+
 
 class AdjacencyAwareMultiHeadAttention(nn.Module):
 
@@ -251,6 +264,8 @@ class GTA3Layer(nn.Module):
             self.phi = phi_gaussian_std1
         elif phi == 'sigmoid_shift':
             self.phi = phi_sigmoid_shift
+        elif phi == 'khop':
+            self.phi = phi_khop
         else:
             raise NotImplementedError(f"GTA3 Error: Unknown phi function {phi}! Use one of the following: 'none', 'test'")
 

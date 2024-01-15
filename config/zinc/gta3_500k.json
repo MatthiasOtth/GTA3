@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500k_patience20_lr=5e-4_reg=1e-3"
+        "name": "zinc_gta3_500k_patience20_lr=5e-4_reg=1e-3_PE"
     }
 }
