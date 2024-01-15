@@ -1,9 +1,5 @@
 # Graph Transformer with Adjacency Aware Attention (GTA3)
 
-Useful links:
-
-- [Overleaf project](https://www.overleaf.com/project/656890c8c129707cf405b59e)
-
 ## Models
 
 ### ZINC model
@@ -89,5 +85,7 @@ Base implementation under `gta3/`. Dataset specific implementations under `zinc/
 
 ## Reproducability
 Use the flag --no_wandb to prevent WeightsAndBiasas from attempting to log data.
+
 For the NEIGHBORSMATCH dataset use the `nbm_r_benchmark` branch along with the configs in `config/nbm`
-For the CLUSTER and ZINC datasets use the `main` branch for the GTA3 model with learnable alpha and the `local-global` branch for the model with local and global heads.
+
+For the CLUSTER and ZINC datasets use the `main` branch for the GTA3 model with learnable alpha and the `local-global` branch for the model with local and global heads. Use the configs `config/<dataset>/gta3_500k[_PE].json` for the corresponding datasets.
