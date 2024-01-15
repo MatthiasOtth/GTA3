@@ -14,7 +14,7 @@
         "alpha_weight": 0,
         "num_heads": 8,
         "num_layers": 16,
-        "pos_encoding": "laplacian",
+        "pos_encoding": "none",
         "pos_enc_dim": 8,
         "dropout": 0.1,
         "residual": true,
@@ -34,6 +34,6 @@
     },
     "logging": {
         "save_dir": "logs/cluster",
-        "name": "cluster_accfix_gta3_500k_lr=5e-4_PE_localglobalheads"
+        "name": "cluster_accfix_gta3_500k_lr=5e-4_localglobalheads"
     }
 }

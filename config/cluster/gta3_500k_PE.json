@@ -1,6 +1,6 @@
 {
     "model": "gta3",
-    "dataset": "zinc",
+    "dataset": "cluster",
     "model_params": {
         "hidden_dim": 56,
         "out_dim": 128,
@@ -11,10 +11,10 @@
             "lb": -10.0,
             "ub": 10.0
         },
-        "alpha_weight": 0.0,
+        "alpha_weight": 0,
         "num_heads": 8,
         "num_layers": 16,
-        "pos_encoding": "none",
+        "pos_encoding": "laplacian",
         "pos_enc_dim": 8,
         "dropout": 0.1,
         "residual": true,
@@ -28,12 +28,12 @@
         "weight_decay": 0.0,
         "lr_threshold": 1e-5,
         "seed": 0,
-        "batch_size": 128,
+        "batch_size": 64,
         "lr_reduce_factor": 0.5,
-        "lr_schedule_patience": 20
+        "lr_schedule_patience": 5
     },
     "logging": {
-        "save_dir": "logs/zinc",
-        "name": "zinc_gta3_500k_patience20_lr=5e-4_localglobalheads"
+        "save_dir": "logs/cluster",
+        "name": "cluster_accfix_gta3_500k_lr=5e-4_PE_localglobalheads"
     }
 }
