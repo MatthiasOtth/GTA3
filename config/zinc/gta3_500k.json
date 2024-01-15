@@ -14,7 +14,7 @@
         "alpha_weight": 1e-3,
         "num_heads": 8,
         "num_layers": 16,
-        "pos_encoding": "laplacian",
+        "pos_encoding": "none",
         "pos_enc_dim": 8,
         "dropout": 0.1,
         "residual": true,
