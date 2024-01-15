@@ -88,5 +88,6 @@ pip install  dglgo -f https://data.dgl.ai/wheels-test/repo.html
 Base implementation under `gta3/`. Dataset specific implementations under `zinc/`, `cluster/` and `neighborsmatch/`.
 
 ## Reproducability
+Use the flag --no_wandb to prevent WeightsAndBiasas from attempting to log data.
 For the NEIGHBORSMATCH dataset use the nbm_r_benchmark branch along with the configs in `config/nbm`
 
