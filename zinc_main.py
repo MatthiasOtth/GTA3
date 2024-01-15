@@ -75,8 +75,7 @@ def main():
     if not args.no_wandb:
         os.makedirs(config['logging']['save_dir'], exist_ok=True)
         logger = WandbLogger(
-            entity='gta3',
-            project='gta3',
+            entity='thrupf', project='gta3-thomas',
             name=config['logging']['name'],
             save_dir=config['logging']['save_dir'],
             log_model=True,
