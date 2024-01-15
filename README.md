@@ -4,17 +4,6 @@ Useful links:
 
 - [Overleaf project](https://www.overleaf.com/project/656890c8c129707cf405b59e)
 
-
-## TODOs
-
-- [x] Debug neighbors match problem ([github](https://github.com/tech-srl/bottleneck))
-- [x] Define configs resulting in ~500K parameters
-- [x] Implement positional embeddings
-- [x] Replicate benchmark setting of another paper. -> Use simple LR scheduler, fixed parameter budget, max 12h runtime etc. 
-- [ ] Rework neighborsmatch to match our preferred design
-- [ ] Define what we want to benchmark, including ablations
-- [ ] Run all the jobs
-
 ## Models
 
 ### ZINC model
@@ -97,3 +86,8 @@ pip install  dglgo -f https://data.dgl.ai/wheels-test/repo.html
 ## GTA3 Model
 
 Base implementation under `gta3/`. Dataset specific implementations under `zinc/`, `cluster/` and `neighborsmatch/`.
+
+## Reproducability
+Use the flag --no_wandb to prevent WeightsAndBiasas from attempting to log data.
+For the NEIGHBORSMATCH dataset use the nbm_r_benchmark branch along with the configs in `config/nbm`
+
